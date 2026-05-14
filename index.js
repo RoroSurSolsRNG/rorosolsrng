@@ -29,6 +29,7 @@ try {
     maxReconnectInterval: parseInt(process.env.MAX_RECONNECT_INTERVAL ?? '120000'),
     reconnectOnDuplicateConnection: process.env.RECONNECT_ON_DUPLICATE === 'true',
     guildId: process.env.GUILD_ID,
+    anthropicKey: process.env.ANTHROPIC_KEY,
   };
 }
 
@@ -529,7 +530,19 @@ function parseTranscendentMessage(content) {
 }
 
 // ────────────────────────────────────────────────────────────
-//  Normalisation des noms d'auras (gateway → clés AURA_DB)
+//  Mise en forme du nom d'aura pour affichage (Title Case)
+// ────────────────────────────────────────────────────────────
+function toDisplayName(auraName) {
+  // Mots à garder en majuscules
+  const KEEP_UPPER = new Set(['GARGANTUA','BLOODLUST','ASCENDANT','CYTOKINESIS','CHILLSEAR','APOSTOLOS','FELLED','BREAKTHROUGH']);
+  if (KEEP_UPPER.has(auraName.toUpperCase())) return auraName.toUpperCase();
+  return auraName
+    .split(/(\s*:\s*|\s+)/)
+    .map(part => part.match(/^\s*:\s*$/) ? ' : ' : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
 // ────────────────────────────────────────────────────────────
 function normalizeAuraName(name) {
   const MAP = {
@@ -609,10 +622,14 @@ async function handleGlobalEvent(data) {
 
   if (finds.length === 0 && config.verboseLogging) { console.log('[Global] Aucun global parseable.'); return; }
 
-  // Compter TOUS les globals détectés (même joueurs non liés) pour le statut
-  totalGlobalsDetected += finds.length;
-  saveCounter();
-  updateBotStatus();
+  // Compter seulement les globals des joueurs liés au serveur
+  const linkedUsernames = new Set(Object.values(db).map(u => u.robloxUsername.toLowerCase()));
+  const linkedFinds = finds.filter(f => linkedUsernames.has(f.robloxUsername.toLowerCase()));
+  if (linkedFinds.length > 0) {
+    totalGlobalsDetected += linkedFinds.length;
+    saveCounter();
+    updateBotStatus();
+  }
 
   const db = loadDB();
   const nowUnix = Math.floor(Date.now() / 1000);
@@ -667,7 +684,7 @@ async function handleGlobalEvent(data) {
     } else if (specialFn) {
       descriptionLine = specialFn(displayName, robloxUsername);
     } else {
-      descriptionLine = `**${displayName}(@${robloxUsername})** ${action} **${auraName}**`;
+      descriptionLine = `**${displayName}(@${robloxUsername})** ${action} **${toDisplayName(auraName)}**`;
       if (finalChance !== 'Inconnue') descriptionLine += `, CHANCE OF **${finalChance}**`;
       if (biome) descriptionLine += ` **[From ${biome}!]**`;
     }
@@ -779,6 +796,13 @@ const commands = [
         .setRequired(true)
         .setAutocomplete(true)
     ),
+  new SlashCommandBuilder().setName('guess').setDescription("Mini-jeu : devine l'aura à partir d'un indice cryptique !"),
+  new SlashCommandBuilder().setName('inventaire').setDescription("Scanne ton inventaire Sol's RNG via screenshot pour importer tes globals"),
+  new SlashCommandBuilder().setName('roulette').setDescription("Mini-jeu : roll une aura aléatoire et découvre ton destin !"),
+  new SlashCommandBuilder()
+    .setName('duel')
+    .setDescription("Mini-jeu : affronte un joueur, le plus rare gagne !")
+    .addUserOption(opt => opt.setName('adversaire').setDescription('Le joueur à défier').setRequired(true)),
 ].map(c => c.toJSON());
 
 async function registerCommands() {
@@ -1298,6 +1322,260 @@ client.on('interactionCreate', async interaction => {
     });
 
     return;
+  }
+
+  // /inventaire
+  if (commandName === 'inventaire') {
+    const db = loadDB();
+    if (!db[interaction.user.id])
+      return interaction.reply({ content: "❌ Tu n'as pas encore lié ton compte. Utilise `/link` d'abord.", ephemeral: true });
+
+    await interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle("📸 Scan d'inventaire Sol's RNG")
+        .setColor(0x7289DA)
+        .setDescription(
+          "Envoie **une ou plusieurs captures d'écran** de ton inventaire Sol's RNG dans ce salon.\n\n" +
+          "⚠️ **Montre uniquement les auras GLORIOUS et TRANSCENDENT.**\n" +
+          "📌 Tu as **2 minutes** pour envoyer tes screenshots.\n" +
+          "✅ Tape `done` quand tu as tout envoyé."
+        )
+        .setFooter({ text: "Seuls les globals (GLORIOUS/TRANSCENDENT) seront importés." })],
+    });
+
+    const screenshots = [];
+    const collector = interaction.channel.createMessageCollector({
+      filter: m => m.author.id === interaction.user.id,
+      time: 120000,
+    });
+
+    collector.on('collect', async msg => {
+      if (msg.content.toLowerCase() === 'done') {
+        collector.stop('done');
+        return;
+      }
+      const images = msg.attachments.filter(a => a.contentType?.startsWith('image/')).map(a => a.url);
+      if (images.length > 0) {
+        screenshots.push(...images);
+        await msg.react('✅').catch(() => {});
+      }
+    });
+
+    collector.on('end', async (_, reason) => {
+      if (screenshots.length === 0) {
+        return interaction.channel.send({ content: `<@${interaction.user.id}> ❌ Aucun screenshot reçu, scan annulé.` });
+      }
+
+      const processingMsg = await interaction.channel.send({
+        embeds: [new EmbedBuilder()
+          .setColor(0xFFA500)
+          .setDescription(`⏳ <@${interaction.user.id}> Analyse de ${screenshots.length} screenshot(s) en cours...`)],
+      });
+
+      try {
+        // Télécharger les images en base64
+        const imageContents = await Promise.all(screenshots.map(async url => {
+          const res  = await fetch(url);
+          const buf  = await res.arrayBuffer();
+          const b64  = Buffer.from(buf).toString('base64');
+          const mime = res.headers.get('content-type') ?? 'image/png';
+          return { type: 'image', source: { type: 'base64', media_type: mime, data: b64 } };
+        }));
+
+        const auraList = Object.keys(AURA_DB)
+          .filter(k => ['GLORIOUS', 'TRANSCENDENT'].includes(AURA_DB[k].tier))
+          .join(', ');
+
+        const promptContent = [
+          ...imageContents,
+          {
+            type: 'text',
+            text: `Tu es un assistant qui analyse des screenshots d'inventaire du jeu Roblox Sol's RNG.
+Voici la liste complète des auras GLORIOUS et TRANSCENDENT possibles dans le jeu :
+${auraList}
+
+Regarde attentivement chaque screenshot et liste UNIQUEMENT les auras de tier GLORIOUS ou TRANSCENDENT que tu vois dans l'inventaire.
+Réponds UNIQUEMENT avec un JSON valide sous cette forme exacte, sans texte avant ni après :
+{"auras": ["NOM_AURA_1", "NOM_AURA_2"]}
+Si tu n'en vois aucune, réponds : {"auras": []}
+Utilise exactement les noms tels qu'ils apparaissent dans la liste fournie.`,
+          },
+        ];
+
+        const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': config.anthropicKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({
+            model: 'claude-opus-4-5',
+            max_tokens: 1024,
+            messages: [{ role: 'user', content: promptContent }],
+          }),
+        });
+
+        const apiData = await apiRes.json();
+        const rawText = apiData?.content?.map(c => c.text ?? '').join('') ?? '';
+        const clean   = rawText.replace(/```json|```/g, '').trim();
+        let detected  = [];
+        try { detected = JSON.parse(clean).auras ?? []; } catch {}
+
+        if (detected.length === 0) {
+          return processingMsg.edit({
+            embeds: [new EmbedBuilder()
+              .setColor(0xED4245)
+              .setDescription(`❌ <@${interaction.user.id}> Aucune aura GLORIOUS/TRANSCENDENT détectée dans les screenshots.`)],
+          });
+        }
+
+        // Normaliser et dédupliquer
+        const normalized = [...new Set(detected.map(n => n.toUpperCase().trim()).filter(n => AURA_DB[n]))];
+
+        if (normalized.length === 0) {
+          return processingMsg.edit({
+            embeds: [new EmbedBuilder()
+              .setColor(0xED4245)
+              .setDescription(`❌ <@${interaction.user.id}> Aucune aura reconnue dans la DB. Vérifie tes screenshots.`)],
+          });
+        }
+
+        // Sauvegarder dans l'historique
+        const history  = loadHistory();
+        const nowUnix  = Math.floor(Date.now() / 1000);
+        if (!history[interaction.user.id]) history[interaction.user.id] = [];
+
+        const existingNames = new Set(history[interaction.user.id].map(e => e.auraName));
+        const newAuras      = normalized.filter(n => !existingNames.has(n));
+        const dupAuras      = normalized.filter(n => existingNames.has(n));
+
+        for (const auraName of newAuras) {
+          const info = AURA_DB[auraName];
+          history[interaction.user.id].push({
+            auraName,
+            tier:      info.tier,
+            chance:    info.chance,
+            biome:     info.biome ?? null,
+            timestamp: nowUnix,
+          });
+        }
+        saveHistory(history);
+
+        // Mettre à jour le compteur
+        if (newAuras.length > 0) {
+          totalGlobalsDetected += newAuras.length;
+          saveCounter();
+          updateBotStatus();
+        }
+
+        // Embed récap
+        const addedLines = newAuras.map(n => {
+          const info = AURA_DB[n];
+          const emoji = TIER_EMOJIS[info.tier] ?? '🌟';
+          return `${emoji} **${toDisplayName(n)}** — ${info.chance}`;
+        }).join('\n');
+
+        const dupLines = dupAuras.length > 0
+          ? `\n\n⚠️ Déjà dans ton historique (ignorés) :\n${dupAuras.map(n => `• ${toDisplayName(n)}`).join('\n')}`
+          : '';
+
+        return processingMsg.edit({
+          embeds: [new EmbedBuilder()
+            .setTitle('✅ Inventaire importé !')
+            .setColor(0x57F287)
+            .setDescription(`<@${interaction.user.id}> **${newAuras.length}** nouvelle(s) aura(s) ajoutée(s) :\n\n${addedLines}${dupLines}`)
+            .setFooter({ text: `${screenshots.length} screenshot(s) analysé(s)` })
+            .setTimestamp()],
+        });
+
+      } catch (err) {
+        console.error('[Inventaire] Erreur:', err);
+        return processingMsg.edit({
+          embeds: [new EmbedBuilder()
+            .setColor(0xED4245)
+            .setDescription(`❌ <@${interaction.user.id}> Erreur lors de l'analyse. Réessaie plus tard.`)],
+        });
+      }
+    });
+
+    return;
+  }
+
+  // /roulette
+  if (commandName === 'roulette') {
+    const auraNames = Object.keys(AURA_DB);
+    const rolled    = auraNames[Math.floor(Math.random() * auraNames.length)];
+    const info      = AURA_DB[rolled];
+    const tierEmoji = TIER_EMOJIS[info.tier] ?? '🌟';
+    const color     = AURA_COLORS[rolled] ?? TIER_COLORS[info.tier] ?? DEFAULT_GLOBAL_COLOR;
+
+    const ROULETTE_COMMENTS = {
+      TRANSCENDENT: ["🌌 L'univers t'a choisi...", "✨ Incroyable, le destin est avec toi !", "🔮 Une force cosmique t'a béni."],
+      GLORIOUS:     ["🏆 Impressionnant ! Tu as de la chance.", "⚡ Pas mal du tout !", "🌟 Belle roll !"],
+      RARE:         ["👌 Correct.", "🎯 Solide.", "💫 C'est déjà ça !"],
+      UNCOMMON:     ["😬 Bof...", "🙃 On a vu mieux.", "😅 Pas de chance..."],
+      COMMON:       ["💀 RIP.", "😂 C'est tout ?", "🗑️ Même pas rare..."],
+    };
+    const comments = ROULETTE_COMMENTS[info.tier] ?? ROULETTE_COMMENTS.COMMON;
+    const comment  = comments[Math.floor(Math.random() * comments.length)];
+
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle(`🎰 Roulette Sol's RNG`)
+        .setColor(color)
+        .setDescription(`<@${interaction.user.id}> a rollé...\n\n## ${tierEmoji} **${toDisplayName(rolled)}**\n\n*${comment}*`)
+        .addFields(
+          { name: '🏷️ Tier',   value: info.tier,   inline: true },
+          { name: '🎲 Chance', value: info.chance,  inline: true },
+        )
+        .setThumbnail(getAuraIcon(rolled))
+        .setTimestamp()],
+    });
+  }
+
+  // /duel
+  if (commandName === 'duel') {
+    const opponent = interaction.options.getUser('adversaire');
+    if (opponent.id === interaction.user.id)
+      return interaction.reply({ content: '❌ Tu ne peux pas te défier toi-même !', ephemeral: true });
+    if (opponent.bot)
+      return interaction.reply({ content: '❌ Tu ne peux pas défier un bot !', ephemeral: true });
+
+    const auraNames = Object.keys(AURA_DB);
+    const roll1     = auraNames[Math.floor(Math.random() * auraNames.length)];
+    const roll2     = auraNames[Math.floor(Math.random() * auraNames.length)];
+    const info1     = AURA_DB[roll1];
+    const info2     = AURA_DB[roll2];
+
+    // Comparer par chance (plus petit dénominateur = plus rare = gagne)
+    function parseChance(str) {
+      const m = str?.replace(/,/g, '').match(/[\d]+$/);
+      return m ? parseInt(m[0]) : 999999999;
+    }
+    const chance1 = parseChance(info1.chance);
+    const chance2 = parseChance(info2.chance);
+
+    const tierEmoji1 = TIER_EMOJIS[info1.tier] ?? '🌟';
+    const tierEmoji2 = TIER_EMOJIS[info2.tier] ?? '🌟';
+
+    let resultLine;
+    if (chance1 > chance2) {
+      resultLine = `🏆 **<@${opponent.id}>** gagne avec **${toDisplayName(roll2)}** (${info2.chance}) !`;
+    } else if (chance2 > chance1) {
+      resultLine = `🏆 **<@${interaction.user.id}>** gagne avec **${toDisplayName(roll1)}** (${info1.chance}) !`;
+    } else {
+      resultLine = `🤝 **Égalité !** Les deux ont la même chance.`;
+    }
+
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle('⚔️ Duel Sol\'s RNG')
+        .setColor(0xE91E63)
+        .addFields(
+          { name: `<@${interaction.user.id}>`, value: `${tierEmoji1} **${toDisplayName(roll1)}**\n${info1.chance}`, inline: true },
+          { name: 'VS', value: '⚡', inline: true },
+          { name: `<@${opponent.id}>`, value: `${tierEmoji2} **${toDisplayName(roll2)}**\n${info2.chance}`, inline: true },
+          { name: '🏁 Résultat', value: resultLine, inline: false },
+        )
+        .setTimestamp()],
+    });
   }
 
   // /forcesync
