@@ -511,13 +511,67 @@ function parseTranscendentMessage(content) {
   return null;
 }
 
+// ────────────────────────────────────────────────────────────
+//  Normalisation des noms d'auras (gateway → clés AURA_DB)
+// ────────────────────────────────────────────────────────────
+function normalizeAuraName(name) {
+  const MAP = {
+    // Noms gateway camelCase / sans séparateur → clés AURA_DB
+    'MasterHand':              'MASTER-HAND',
+    'Masterhand':              'MASTER-HAND',
+    'MASTERHAND':              'MASTER-HAND',
+    'RedMoon':                 'RED MOON',
+    'Redmoon':                 'RED MOON',
+    'REDMOON':                 'RED MOON',
+    'AbyssalHunter':           'ABYSSAL HUNTER',
+    'Abyssalhunter':           'ABYSSAL HUNTER',
+    'ABYSSALHUNTER':           'ABYSSAL HUNTER',
+    'HyperVolt':               'HYPER-VOLT : EVER-STORM',
+    'HyperVoltEverStorm':      'HYPER-VOLT : EVER-STORM',
+    'Hyper-Volt':              'HYPER-VOLT : EVER-STORM',
+    'FloraEvergreen':          'FLORA : EVERGREEN',
+    'Flora:Evergreen':         'FLORA : EVERGREEN',
+    'StarscourgeRadiant':      'STARSCOURGE : RADIANT',
+    'Starscourge:Radiant':     'STARSCOURGE : RADIANT',
+    'ChromaticGenesis':        'CHROMATIC : GENESIS',
+    'Chromatic:Genesis':       'CHROMATIC : GENESIS',
+    'TwilightWitheringGrace':  'TWILIGHT : WITHERING GRACE',
+    'TwilightWithering':       'TWILIGHT : WITHERING GRACE',
+    'Twilight:WitheringGrace': 'TWILIGHT : WITHERING GRACE',
+    'OvertureHistory':         'OVERTURE : HISTORY',
+    'Overture:History':        'OVERTURE : HISTORY',
+    'AstralZodiac':            'ASTRAL : ZODIAC',
+    'Astral:Zodiac':           'ASTRAL : ZODIAC',
+    'ExoticVoid':              'EXOTIC VOID',
+    'Exotic:Void':             'EXOTIC VOID',
+    'RuinsWithered':           'RUINS : WITHERED',
+    'Ruins:Withered':          'RUINS : WITHERED',
+    'ApostolosVeil':           'APOSTOLOS : VEIL',
+    'Apostolos:Veil':          'APOSTOLOS : VEIL',
+    'MatrixReality':           'MATRIX : REALITY',
+    'Matrix:Reality':          'MATRIX : REALITY',
+    'MatrixOverdrive':         'MATRIX : OVERDRIVE',
+    'Matrix:Overdrive':        'MATRIX : OVERDRIVE',
+    'SymphonyBloomed':         'SYMPHONY : BLOOMED',
+    'Symphony:Bloomed':        'SYMPHONY : BLOOMED',
+    'KyawthuiteRemembrance':   'KYAWTHUITE : REMEMBRANCE',
+    'Kyawthuite:Remembrance':  'KYAWTHUITE : REMEMBRANCE',
+    'ShardSurfer':             'SHARD SURFER',
+    'NightmareSky':            'NIGHTMARE SKY',
+    'AfterParty':              'AFTER PARTY',
+    'ImPeach':                 "I'M PEACH",
+    "I'mPeach":                "I'M PEACH",
+  };
+  return MAP[name] ?? MAP[name.toUpperCase()] ?? name.toUpperCase();
+}
+
 function parseLines(content) {
   const results = [];
   const p1 = /\*\*[^*]+\(@([^)]+)\)\*\*\s+(HAS FOUND|HAS CRAFTED)\s+\*\*(.+?)\*\*(?:,\s+CHANCE OF\s+\*\*(1\s+IN\s+[\d,]+)\*\*)?(?:\s+\*\*\[From (.+?)!\]\*\*)?/g;
   const p2 = /\*\*@([^*]+)\*\*\s+(HAS FOUND|HAS CRAFTED)\s+\*\*(.+?)\*\*(?:,\s+CHANCE OF\s+\*\*(1\s+IN\s+[\d,]+)\*\*)?(?:\s+\*\*\[From (.+?)!\]\*\*)?/g;
   let m;
-  while ((m = p1.exec(content)) !== null) results.push({ robloxUsername: m[1].trim(), action: m[2].trim(), auraName: m[3].trim(), chanceStr: m[4]?.trim() ?? null, biome: m[5]?.trim() ?? null });
-  while ((m = p2.exec(content)) !== null) results.push({ robloxUsername: m[1].trim(), action: m[2].trim(), auraName: m[3].trim(), chanceStr: m[4]?.trim() ?? null, biome: m[5]?.trim() ?? null });
+  while ((m = p1.exec(content)) !== null) results.push({ robloxUsername: m[1].trim(), action: m[2].trim(), auraName: normalizeAuraName(m[3].trim()), chanceStr: m[4]?.trim() ?? null, biome: m[5]?.trim() ?? null });
+  while ((m = p2.exec(content)) !== null) results.push({ robloxUsername: m[1].trim(), action: m[2].trim(), auraName: normalizeAuraName(m[3].trim()), chanceStr: m[4]?.trim() ?? null, biome: m[5]?.trim() ?? null });
   return results;
 }
 
@@ -551,7 +605,9 @@ async function handleGlobalEvent(data) {
     const tier        = auraInfo?.tier ?? 'TRANSCENDENT';
     const embedColor  = AURA_COLORS[auraName.toUpperCase()] ?? 0x565FF2;
     const tierEmoji   = TIER_EMOJIS[tier] ?? '🌌';
-    const finalChance = chanceStr ?? auraInfo?.chance ?? 'Inconnue';
+    const finalChance = (auraInfo?.chance && auraInfo.chance !== 'Unknown')
+      ? auraInfo.chance
+      : (chanceStr ?? auraInfo?.chance ?? 'Inconnue');
     const auraBiome   = auraInfo?.biome ?? null;
 
     const auraIconURL = getAuraIcon(auraName);
@@ -575,7 +631,8 @@ async function handleGlobalEvent(data) {
       'MONARCH':      (display, u) => `All hail, The **${display}(@${u})**.`,
       'LEVIATHAN':    (display, u) => `**${display}(@${u})** has tamed the **Ruler of Beneath**.`,
       'NEFERKHAF':    (display, u) => `**${display}(@${u})** HAS FOUND   ** Neferkhaf, The Crawler! ** `,
-      'RED MOON':     (display, u) => `**${display}(@${u})** has gotten the ** Fragment of Chaos. **`,
+      'RED MOON':     (display, u) => `**${display}(@${u})** has gotten the **Fragment of Chaos**.`,
+      'MASTER-HAND':  (display, u) => `**${display}(@${u})** has found **MASTER-HAND**.`,
     };
 
     const displayName = userData.displayName ?? robloxUsername;
@@ -597,7 +654,7 @@ async function handleGlobalEvent(data) {
     const fields = [
       { name: 'Rarity', value: finalChance !== 'Inconnue' ? finalChance : '—', inline: true },
     ];
-    // Biome masqué
+    if (auraBiome) fields.push({ name: '🌍 Biome', value: auraBiome, inline: true });
     fields.push({ name: 'Time Discovered', value: `<t:${nowUnix}:R>`, inline: false });
 
     const embed = new EmbedBuilder()
@@ -690,6 +747,17 @@ const commands = [
         .setRequired(false)
     ),
   new SlashCommandBuilder().setName('guess').setDescription("Mini-jeu : devine l'aura a partir de sa description !"),
+  new SlashCommandBuilder()
+    .setName('giveglobal')
+    .setDescription("(Admin) Ajoute manuellement un global à un membre")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addUserOption(opt => opt.setName('user').setDescription('Membre Discord').setRequired(true))
+    .addStringOption(opt =>
+      opt.setName('aura')
+        .setDescription("Nom de l'aura (autocomplete)")
+        .setRequired(true)
+        .setAutocomplete(true)
+    ),
 ].map(c => c.toJSON());
 
 async function registerCommands() {
@@ -709,7 +777,7 @@ async function registerCommands() {
 client.on('interactionCreate', async interaction => {
 
   // ── Autocomplete /testglobal ──
-  if (interaction.isAutocomplete() && interaction.commandName === 'testglobal') {
+  if (interaction.isAutocomplete() && (interaction.commandName === 'testglobal' || interaction.commandName === 'giveglobal')) {
     const focused = interaction.options.getFocused().toUpperCase();
     const gloriousRandom = { name: '🎲 GLORIOUS RANDOM — Une Glorious au hasard', value: 'GLORIOUS RANDOM' };
     const choices = Object.entries(AURA_DB)
@@ -1054,6 +1122,49 @@ client.on('interactionCreate', async interaction => {
   }
 
 
+  // /giveglobal
+  if (commandName === 'giveglobal') {
+    const target   = interaction.options.getUser('user');
+    const auraName = interaction.options.getString('aura').trim().toUpperCase();
+
+    const db = loadDB();
+    if (!db[target.id]) return interaction.reply({ content: `❌ **${target.username}** n'a pas lié son compte Roblox.`, ephemeral: true });
+
+    const auraInfo = getAuraInfo(auraName);
+    if (!auraInfo) return interaction.reply({ content: `❌ Aura **${auraName}** introuvable dans la DB.`, ephemeral: true });
+
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const history = loadHistory();
+    if (!history[target.id]) history[target.id] = [];
+    history[target.id].push({
+      auraName,
+      tier:      auraInfo.tier,
+      chance:    auraInfo.chance,
+      biome:     auraInfo.biome ?? null,
+      timestamp: nowUnix,
+    });
+    saveHistory(history);
+
+    totalGlobalsDetected++;
+    updateBotStatus();
+
+    const tierEmoji = TIER_EMOJIS[auraInfo.tier] ?? '🌟';
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle('✅ Global ajouté manuellement')
+        .setColor(AURA_COLORS[auraName] ?? TIER_COLORS[auraInfo.tier] ?? DEFAULT_GLOBAL_COLOR)
+        .addFields(
+          { name: '👤 Joueur',   value: `<@${target.id}> (${db[target.id].robloxUsername})`, inline: true },
+          { name: `${tierEmoji} Aura`, value: auraName, inline: true },
+          { name: '🏷️ Tier',    value: auraInfo.tier,   inline: true },
+          { name: '🎲 Chance',  value: auraInfo.chance,  inline: true },
+        )
+        .setFooter({ text: `Ajouté par ${interaction.user.username}` })
+        .setTimestamp()],
+      ephemeral: true,
+    });
+  }
+
   // /guess
   if (commandName === 'guess') {
     const auraNames = Object.keys(AURA_DB);
@@ -1248,7 +1359,5 @@ const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => res.end('Bot en ligne!')).listen(PORT, () => {
   console.log('[HTTP] Serveur keep-alive sur port', PORT);
 });
-
-client.login(config.token);
 
 client.login(config.token);
