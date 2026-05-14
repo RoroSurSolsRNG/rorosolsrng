@@ -379,7 +379,22 @@ const AURA_DESCRIPTIONS = {
 // ════════════════════════════════════════════════════════════
 
 async function analyzeInventoryWithAI(imageUrl, openrouterKey) {
-  const auraList = Object.keys(FULL_AURA_DB).join(', ');
+  // Télécharger l'image depuis Discord et la convertir en base64
+  // (les URLs Discord CDN expirent et ne sont pas toujours accessibles par les APIs externes)
+  let imageContent;
+  try {
+    const imgRes  = await fetch(imageUrl);
+    const buffer  = await imgRes.arrayBuffer();
+    const b64     = Buffer.from(buffer).toString('base64');
+    const mime    = imgRes.headers.get('content-type') ?? 'image/png';
+    imageContent  = { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}`, detail: 'high' } };
+  } catch (err) {
+    console.error('[Inventory] Impossible de charger l\'image:', err.message);
+    // Fallback : URL directe
+    imageContent = { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } };
+  }
+
+  const auraList = Object.keys(FULL_AURA_DB).join('\n- ');
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -388,43 +403,47 @@ async function analyzeInventoryWithAI(imageUrl, openrouterKey) {
     },
     body: JSON.stringify({
       model: 'openai/gpt-4o',
-      max_tokens: 1500,
+      max_tokens: 2000,
       messages: [{
         role: 'user',
         content: [
           {
             type: 'text',
-            text: `Tu es un expert du jeu Roblox Sol's RNG. Analyse cette capture d'écran de l'inventaire d'auras d'un joueur.
+            text: `You are an expert at the Roblox game Sol's RNG. Analyze this screenshot of a player's aura storage/inventory.
 
-Voici la liste COMPLÈTE des auras possibles dans le jeu (uniquement les 100M+ et Challenged) :
-${auraList}
+IMPORTANT: This is an "Aura Storage" UI from Sol's RNG. Each slot shows an aura name as text label. Read ALL the text labels visible in the grid slots carefully.
 
-Ta mission :
-1. Identifie TOUTES les auras visibles dans l'image
-2. Pour chaque aura trouvée, donne son nom EXACT tel qu'il apparaît dans la liste ci-dessus (respecte la casse et la ponctuation)
-3. Si une aura est visible mais que tu n'es pas sûr du nom exact, indique-la quand même avec ta meilleure estimation
+Here is the COMPLETE list of valid aura names to match against:
+- ${auraList}
 
-Réponds UNIQUEMENT en JSON valide, sans texte avant ni après, dans ce format exact :
+Instructions:
+1. Read every aura name label visible in every grid slot (even locked ones show the name)
+2. Match each name you see to the closest entry in the list above (case-insensitive)
+3. Count duplicates — if "Memory" appears 4 times, include it 4 times in "found"
+4. Common auras in this image context: OBLIVION, MEMORY, EQUINOX, LUMINOSITY, AEGIS, SOVEREIGN, RUINS : WITHERED
+
+Respond ONLY with valid JSON, no text before or after:
 {
-  "found": ["NOM_AURA_1", "NOM_AURA_2", ...],
-  "uncertain": ["NOM_AURA_INCERTAIN_1", ...],
-  "confidence": 0.85
+  "found": ["EXACT_NAME_1", "EXACT_NAME_2", ...],
+  "uncertain": ["UNSURE_NAME_1", ...],
+  "confidence": 0.9
 }
 
-Si tu ne vois pas d'inventaire d'auras dans l'image, réponds :
-{"found": [], "uncertain": [], "confidence": 0, "error": "Pas d'inventaire visible"}`
+Use UPPERCASE names exactly as they appear in the list. If no inventory is visible:
+{"found": [], "uncertain": [], "confidence": 0, "error": "No inventory visible"}`
           },
-          { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } }
+          imageContent,
         ]
       }]
     })
   });
   const data = await response.json();
   const text = data?.choices?.[0]?.message?.content?.trim() ?? '';
+  console.log('[Inventory] IA raw response:', text.slice(0, 300));
   try {
     return JSON.parse(text.replace(/```json|```/g, '').trim());
   } catch {
-    return { found: [], uncertain: [], confidence: 0, error: 'Erreur de parsing IA' };
+    return { found: [], uncertain: [], confidence: 0, error: 'Erreur de parsing IA: ' + text.slice(0, 100) };
   }
 }
 
@@ -459,20 +478,47 @@ Identifie les auras mentionnées et retourne UNIQUEMENT ce JSON :
   }
 }
 
+// Fuzzy match : cherche la meilleure correspondance dans la DB
+function fuzzyFindAura(name) {
+  const nameUp = name.toUpperCase().trim();
+  // 1. Match exact
+  if (FULL_AURA_DB[nameUp]) return { key: nameUp, info: FULL_AURA_DB[nameUp] };
+  // 2. Match exact key (les clés sont déjà en majuscules)
+  const exactCI = Object.entries(FULL_AURA_DB).find(([k]) => k.toUpperCase() === nameUp);
+  if (exactCI) return { key: exactCI[0], info: exactCI[1] };
+  // 3. Match partiel
+  const partial = Object.entries(FULL_AURA_DB).find(([k]) =>
+    k.toUpperCase().includes(nameUp) || nameUp.includes(k.toUpperCase())
+  );
+  if (partial) return { key: partial[0], info: partial[1] };
+  // 4. Match par mots clés (min 4 chars)
+  const nameWords = nameUp.split(/[\s:_\-]+/).filter(w => w.length >= 4);
+  if (nameWords.length > 0) {
+    const wordMatch = Object.entries(FULL_AURA_DB).find(([k]) =>
+      nameWords.some(w => k.toUpperCase().includes(w))
+    );
+    if (wordMatch) return { key: wordMatch[0], info: wordMatch[1] };
+  }
+  return null;
+}
+
 function buildInventoryEmbed(robloxUsername, aiResult, historyGlobals) {
   const { found = [], uncertain = [], confidence = 0 } = aiResult;
 
   const historicNames = (historyGlobals ?? []).map(g => g.auraName.toUpperCase().trim());
-  const allAuraNames  = [...new Set([...found.map(n => n.toUpperCase().trim()), ...historicNames])];
+  // Garder les doublons de l'IA (Memory x4, Aegis x4, etc.)
+  const aiNamesUpper  = found.map(n => n.toUpperCase().trim());
+  const allAuraNames  = [...aiNamesUpper, ...historicNames.filter(h => !aiNamesUpper.includes(h))];
 
   const enriched = allAuraNames
     .map(name => {
-      const info = FULL_AURA_DB[name] ?? Object.entries(FULL_AURA_DB).find(([k]) => k.toUpperCase() === name)?.[1];
+      const match       = fuzzyFindAura(name);
+      const displayName = match ? match.key : name;
       return {
-        name,
-        info: info ?? { tier: 'UNKNOWN', chance: '?', rarity: 0 },
+        name:        displayName,
+        info:        match ? match.info : { tier: 'UNKNOWN', chance: '?', rarity: 0 },
         fromHistory: historicNames.includes(name),
-        fromAI: found.map(n => n.toUpperCase()).includes(name),
+        fromAI:      aiNamesUpper.includes(name),
       };
     })
     .filter(e => e.info.tier !== 'UNKNOWN')
