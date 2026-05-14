@@ -1678,3 +1678,5 @@ http.createServer((req, res) => res.end('Bot en ligne!')).listen(PORT, () => {
 });
 
 client.login(config.token);
+
+client.login(config.token);
