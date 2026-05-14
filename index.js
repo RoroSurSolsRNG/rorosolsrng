@@ -67,10 +67,27 @@ function saveHistory(data) {
 }
 
 // Compteur total de globals détectés (pour le statut du bot)
+const COUNTER_PATH = path.join(__dirname, 'globals_counter.json');
 let totalGlobalsDetected = 0;
+function loadCounter() {
+  try {
+    if (fs.existsSync(COUNTER_PATH)) {
+      const data = JSON.parse(fs.readFileSync(COUNTER_PATH, 'utf8'));
+      return data.total ?? 0;
+    }
+  } catch {}
+  return 0;
+}
+function saveCounter() {
+  fs.writeFileSync(COUNTER_PATH, JSON.stringify({ total: totalGlobalsDetected }));
+}
 function initTotalGlobals() {
-  const h = loadHistory();
-  totalGlobalsDetected = Object.values(h).reduce((acc, arr) => acc + arr.length, 0);
+  totalGlobalsDetected = loadCounter();
+  if (totalGlobalsDetected === 0) {
+    const h = loadHistory();
+    totalGlobalsDetected = Object.values(h).reduce((acc, arr) => acc + arr.length, 0);
+    saveCounter();
+  }
 }
 function updateBotStatus() {
   client.user?.setActivity(`👀 ${totalGlobalsDetected} globals trackés`, { type: ActivityType.Watching });
@@ -592,6 +609,11 @@ async function handleGlobalEvent(data) {
 
   if (finds.length === 0 && config.verboseLogging) { console.log('[Global] Aucun global parseable.'); return; }
 
+  // Compter TOUS les globals détectés (même joueurs non liés) pour le statut
+  totalGlobalsDetected += finds.length;
+  saveCounter();
+  updateBotStatus();
+
   const db = loadDB();
   const nowUnix = Math.floor(Date.now() / 1000);
 
@@ -686,10 +708,6 @@ async function handleGlobalEvent(data) {
     });
     saveHistory(history);
 
-    // Compteur total + statut bot
-    totalGlobalsDetected++;
-    updateBotStatus();
-
     if (isTranscendent) console.log(`[Global] 🌌 TRANSCENDANT détecté : "${auraName}" — ${robloxUsername}`);
     if (challengedPing)  console.log(`[Global] 👑 ${tier} : "${auraName}"`);
     console.log(`[Global] ✅ Notif envoyée — ${userData.robloxUsername} | "${auraName}"`);
@@ -746,7 +764,10 @@ const commands = [
         .setDescription('Username Roblox à utiliser (laisser vide = ton propre pseudo)')
         .setRequired(false)
     ),
-  new SlashCommandBuilder().setName('guess').setDescription("Mini-jeu : devine l'aura a partir de sa description !"),
+  new SlashCommandBuilder()
+    .setName('resetleaderboard')
+    .setDescription("(Admin) Remet à zéro le leaderboard et le compteur de globals")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   new SlashCommandBuilder()
     .setName('giveglobal')
     .setDescription("(Admin) Ajoute manuellement un global à un membre")
@@ -1146,6 +1167,7 @@ client.on('interactionCreate', async interaction => {
     saveHistory(history);
 
     totalGlobalsDetected++;
+    saveCounter();
     updateBotStatus();
 
     const tierEmoji = TIER_EMOJIS[auraInfo.tier] ?? '🌟';
@@ -1160,6 +1182,23 @@ client.on('interactionCreate', async interaction => {
           { name: '🎲 Chance',  value: auraInfo.chance,  inline: true },
         )
         .setFooter({ text: `Ajouté par ${interaction.user.username}` })
+        .setTimestamp()],
+      ephemeral: true,
+    });
+  }
+
+  // /resetleaderboard
+  if (commandName === 'resetleaderboard') {
+    saveHistory({});
+    totalGlobalsDetected = 0;
+    saveCounter();
+    updateBotStatus();
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle('🗑️ Leaderboard réinitialisé')
+        .setColor(0xFF4500)
+        .setDescription("L'historique de tous les globals et le compteur ont été remis à zéro.")
+        .setFooter({ text: `Réinitialisé par ${interaction.user.username}` })
         .setTimestamp()],
       ephemeral: true,
     });
