@@ -32,8 +32,6 @@ try {
   };
 }
 
-// IDs des rôles
-
 // Channel admin pour les logs privés
 const ADMIN_LOG_CHANNEL_ID = '1448744993283113133';
 
@@ -201,7 +199,7 @@ const AURA_ICONS = {
   'LUMINOSITY':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502306895799652492/LUMI_star.png?ex=69ff3bd3&is=69fdea53&hm=bcaa64d07112ddf8c06dde7e1f52a754e066e27a3256e719cdf5f5f90ffc52f1&',
   'OPPRESSION':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502306918256083186/OPPRESSION_star.png?ex=69ff3bd8&is=69fdea58&hm=408043990ddce1e1338225093f253d487293501156351dd5ea4dd82dfb3e312c&',
   'GLITCH':       'https://cdn.discordapp.com/attachments/1125441054313816145/1502306934311882792/GLITCH_star.png?ex=69ff3bdc&is=69fdea5c&hm=dd2a3b87cf1ab9cfc78e3f7bfbecde754204ab04d72d2b0868a6f3c359ac759f&',
-  'MONARCH':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502306953689301002/MONARCH_star.png?ex=69ff3be1&is=69fdea61&hm=4bf4fd4478e1b3d49cfd56a1b20a8c259e7e0aa0c6646473fd14145e9911fc19&',
+  'MONARCH':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502306953689301002/MONARCH_star.png?ex=69ff3be1&is=69fdea61&hm=4bf4fd4478e1b3d49cfc78e3f7bfbecde754204ab04d72d2b0868a6f3c359ac759f&',
   'NYCTOPHOBIA':  'https://cdn.discordapp.com/attachments/1125441054313816145/1502306969451761704/NYCTO_star.png?ex=69ff3be5&is=69fdea65&hm=a86f289ce9d6a98f580544967f261198017efad80780ea77e81e3a23b33d95f6&',
   'YOLKEGG':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502307034694156360/YOLKEGG_star.png?ex=69ff3bf4&is=69fdea74&hm=4b61bb98c16869eb1bb0d4457b02fd7289aa36b2342250a27de741567d6acba5&',
   'PIXELATION':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502307053090373723/Pixelation_star.png?ex=69ff3bf8&is=69fdea78&hm=d09e162d4717da68778c8131600e8d031a47406b658998312c5e8eedf8e690b5&',
@@ -254,7 +252,6 @@ const TIER_EMOJIS = {
   'GLORIOUS':     '🌟',
   'EXALTED':      '💜',
 };
-
 
 function getAuraInfo(auraName) {
   const upper = auraName.toUpperCase().trim();
@@ -349,11 +346,7 @@ const AURA_DESCRIPTIONS = {
   'STARSCOURGE : RADIANT':    "Le fléau des étoiles rayonnant. Biome Starfall.",
   'SPECTRAFLOW':              "Le flux spectral de toutes les couleurs.",
   'CHROMATIC : GENESIS':      "La genèse chromatique — naissance de la couleur.",
-  'NIGHTMARE SKY':            "Le ciel cauchemardesque du Dreamspace.",
-  'MALEDICTION':              "La malédiction incarnée.",
-  'SOVEREIGN':                "La souveraineté pure.",
 };
-
 
 function getChallengedPing(tier) {
   return null;
@@ -423,11 +416,10 @@ function scheduleReconnect() {
   }, reconnectInterval);
 }
 
-// Vérification périodique de la connexion gateway (alerte si déconnecté > 10 min)
 function startGatewayWatchdog() {
   setInterval(() => {
     if (lastDisconnectTime && Date.now() - lastDisconnectTime > 10 * 60 * 1000) {
-      lastDisconnectTime = Date.now(); // reset pour éviter le spam
+      lastDisconnectTime = Date.now();
     }
   }, 5 * 60 * 1000);
 }
@@ -533,12 +525,21 @@ async function handleGlobalEvent(data) {
   const rawContent = data.content || '';
   console.log('[DEBUG] rawContent EXACT:', JSON.stringify(rawContent));
 
-  const transcendent = parseTranscendentMessage(rawContent);
-  const finds = transcendent ? [transcendent] : parseLines(rawContent);
-
-  if (finds.length === 0 && config.verboseLogging) { console.log('[Global] Aucun global parseable.'); return; }
-
+  // ✅ FIX : db chargé EN PREMIER, avant toute utilisation
   const db = loadDB();
+  const linkedUsernames = new Set(Object.values(db).map(u => u.robloxUsername.toLowerCase()));
+
+  const transcendent = parseTranscendentMessage(rawContent);
+  let finds = transcendent ? [transcendent] : parseLines(rawContent);
+
+  // Filtrer uniquement les joueurs liés (évite de traiter inutilement)
+  finds = finds.filter(f => linkedUsernames.has(f.robloxUsername.toLowerCase()));
+
+  if (finds.length === 0) {
+    if (config.verboseLogging) console.log('[Global] Aucun joueur lié dans ce batch — ignoré.');
+    return;
+  }
+
   const nowUnix = Math.floor(Date.now() / 1000);
 
   for (const { robloxUsername, action, auraName, chanceStr, biome, isTranscendent, getMessageFn } of finds) {
@@ -549,7 +550,7 @@ async function handleGlobalEvent(data) {
     const [discordId, userData] = entry;
     const auraInfo    = getAuraInfo(auraName);
     const tier        = auraInfo?.tier ?? 'TRANSCENDENT';
-    const embedColor  = AURA_COLORS[auraName.toUpperCase()] ?? 0x565FF2;
+    const embedColor  = AURA_COLORS[auraName.toUpperCase()] ?? DEFAULT_GLOBAL_COLOR;
     const tierEmoji   = TIER_EMOJIS[tier] ?? '🌌';
     const finalChance = chanceStr ?? auraInfo?.chance ?? 'Inconnue';
     const auraBiome   = auraInfo?.biome ?? null;
@@ -593,7 +594,6 @@ async function handleGlobalEvent(data) {
       if (biome) descriptionLine += ` **[From ${biome}!]**`;
     }
 
-    // Champs de l'embed
     const fields = [
       { name: 'Rarity', value: finalChance !== 'Inconnue' ? finalChance : '—', inline: true },
     ];
@@ -612,7 +612,7 @@ async function handleGlobalEvent(data) {
     const userPing        = userData.notifyDisabled ? '' : `<@${discordId}>`;
     const extraPings      = [challengedPing, billionPlusPing, userPing].filter(Boolean).join(' ');
 
-    const sentMsg = await notifChannel.send({
+    await notifChannel.send({
       content: extraPings ? `<@&${config.notificationRoleId}> ${extraPings}` : `<@&${config.notificationRoleId}>`,
       embeds: [embed],
     });
@@ -629,7 +629,6 @@ async function handleGlobalEvent(data) {
     });
     saveHistory(history);
 
-    // Compteur total + statut bot
     totalGlobalsDetected++;
     updateBotStatus();
 
@@ -839,7 +838,6 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
-
   // /globalsof
   if (commandName === 'globalsof') {
     const target = interaction.options.getUser('user');
@@ -875,7 +873,6 @@ client.on('interactionCreate', async interaction => {
     const myGlobals = history[interaction.user.id] ?? [];
     if (myGlobals.length === 0) return interaction.reply({ content: "Tu n'as encore aucun global détecté par le bot !", ephemeral: true });
 
-    // Trouver l'aura avec la chance la plus haute (= la plus rare)
     function parseChance(chanceStr) {
       const match = (chanceStr ?? '').replace(/,/g, '').match(/1 IN (\d+)/i);
       return match ? parseInt(match[1]) : 0;
@@ -920,8 +917,8 @@ client.on('interactionCreate', async interaction => {
     if (!myData)    return interaction.reply({ content: "❌ Tu n'as pas encore lié ton compte. Utilise `/link`", ephemeral: true });
     if (!theirData) return interaction.reply({ content: `❌ **${target.username}** n'a pas lié son compte Roblox.`, ephemeral: true });
 
-    const history    = loadHistory();
-    const myGlobals  = history[interaction.user.id] ?? [];
+    const history      = loadHistory();
+    const myGlobals    = history[interaction.user.id] ?? [];
     const theirGlobals = history[target.id] ?? [];
 
     function parseChance(chanceStr) {
@@ -929,7 +926,6 @@ client.on('interactionCreate', async interaction => {
       return match ? parseInt(match[1]) : 0;
     }
 
-    // Tier le plus commun
     function dominantTier(globals) {
       if (globals.length === 0) return '—';
       const counts = {};
@@ -937,7 +933,6 @@ client.on('interactionCreate', async interaction => {
       return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
     }
 
-    // Aura la plus rare
     function rarestAura(globals) {
       if (globals.length === 0) return null;
       return globals.reduce((best, g) => parseChance(g.chance) > parseChance(best.chance) ? g : best);
@@ -1052,7 +1047,6 @@ client.on('interactionCreate', async interaction => {
     const msg = statut === 'on' ? '🔔 Tu seras désormais pingué pour chaque global !' : '🔕 Tu ne seras plus pingué pour tes globals.';
     return interaction.reply({ content: msg, ephemeral: true });
   }
-
 
   // /guess
   if (commandName === 'guess') {
@@ -1249,6 +1243,5 @@ http.createServer((req, res) => res.end('Bot en ligne!')).listen(PORT, () => {
   console.log('[HTTP] Serveur keep-alive sur port', PORT);
 });
 
+// ⚠️ Fix : un seul client.login (le double login causait des erreurs)
 client.login(config.token);
-client.login(config.token);
-
