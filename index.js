@@ -29,7 +29,6 @@ try {
     maxReconnectInterval: parseInt(process.env.MAX_RECONNECT_INTERVAL ?? '120000'),
     reconnectOnDuplicateConnection: process.env.RECONNECT_ON_DUPLICATE === 'true',
     guildId: process.env.GUILD_ID,
-    anthropicKey: process.env.ANTHROPIC_KEY,
   };
 }
 
@@ -68,27 +67,10 @@ function saveHistory(data) {
 }
 
 // Compteur total de globals détectés (pour le statut du bot)
-const COUNTER_PATH = path.join(__dirname, 'globals_counter.json');
 let totalGlobalsDetected = 0;
-function loadCounter() {
-  try {
-    if (fs.existsSync(COUNTER_PATH)) {
-      const data = JSON.parse(fs.readFileSync(COUNTER_PATH, 'utf8'));
-      return data.total ?? 0;
-    }
-  } catch {}
-  return 0;
-}
-function saveCounter() {
-  fs.writeFileSync(COUNTER_PATH, JSON.stringify({ total: totalGlobalsDetected }));
-}
 function initTotalGlobals() {
-  totalGlobalsDetected = loadCounter();
-  if (totalGlobalsDetected === 0) {
-    const h = loadHistory();
-    totalGlobalsDetected = Object.values(h).reduce((acc, arr) => acc + arr.length, 0);
-    saveCounter();
-  }
+  const h = loadHistory();
+  totalGlobalsDetected = Object.values(h).reduce((acc, arr) => acc + arr.length, 0);
 }
 function updateBotStatus() {
   client.user?.setActivity(`👀 ${totalGlobalsDetected} globals trackés`, { type: ActivityType.Watching });
@@ -529,79 +511,13 @@ function parseTranscendentMessage(content) {
   return null;
 }
 
-// ────────────────────────────────────────────────────────────
-//  Mise en forme du nom d'aura pour affichage (Title Case)
-// ────────────────────────────────────────────────────────────
-function toDisplayName(auraName) {
-  // Mots à garder en majuscules
-  const KEEP_UPPER = new Set(['GARGANTUA','BLOODLUST','ASCENDANT','CYTOKINESIS','CHILLSEAR','APOSTOLOS','FELLED','BREAKTHROUGH']);
-  if (KEEP_UPPER.has(auraName.toUpperCase())) return auraName.toUpperCase();
-  return auraName
-    .split(/(\s*:\s*|\s+)/)
-    .map(part => part.match(/^\s*:\s*$/) ? ' : ' : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join('')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-// ────────────────────────────────────────────────────────────
-function normalizeAuraName(name) {
-  const MAP = {
-    // Noms gateway camelCase / sans séparateur → clés AURA_DB
-    'MasterHand':              'MASTER-HAND',
-    'Masterhand':              'MASTER-HAND',
-    'MASTERHAND':              'MASTER-HAND',
-    'RedMoon':                 'RED MOON',
-    'Redmoon':                 'RED MOON',
-    'REDMOON':                 'RED MOON',
-    'AbyssalHunter':           'ABYSSAL HUNTER',
-    'Abyssalhunter':           'ABYSSAL HUNTER',
-    'ABYSSALHUNTER':           'ABYSSAL HUNTER',
-    'HyperVolt':               'HYPER-VOLT : EVER-STORM',
-    'HyperVoltEverStorm':      'HYPER-VOLT : EVER-STORM',
-    'Hyper-Volt':              'HYPER-VOLT : EVER-STORM',
-    'FloraEvergreen':          'FLORA : EVERGREEN',
-    'Flora:Evergreen':         'FLORA : EVERGREEN',
-    'StarscourgeRadiant':      'STARSCOURGE : RADIANT',
-    'Starscourge:Radiant':     'STARSCOURGE : RADIANT',
-    'ChromaticGenesis':        'CHROMATIC : GENESIS',
-    'Chromatic:Genesis':       'CHROMATIC : GENESIS',
-    'TwilightWitheringGrace':  'TWILIGHT : WITHERING GRACE',
-    'TwilightWithering':       'TWILIGHT : WITHERING GRACE',
-    'Twilight:WitheringGrace': 'TWILIGHT : WITHERING GRACE',
-    'OvertureHistory':         'OVERTURE : HISTORY',
-    'Overture:History':        'OVERTURE : HISTORY',
-    'AstralZodiac':            'ASTRAL : ZODIAC',
-    'Astral:Zodiac':           'ASTRAL : ZODIAC',
-    'ExoticVoid':              'EXOTIC VOID',
-    'Exotic:Void':             'EXOTIC VOID',
-    'RuinsWithered':           'RUINS : WITHERED',
-    'Ruins:Withered':          'RUINS : WITHERED',
-    'ApostolosVeil':           'APOSTOLOS : VEIL',
-    'Apostolos:Veil':          'APOSTOLOS : VEIL',
-    'MatrixReality':           'MATRIX : REALITY',
-    'Matrix:Reality':          'MATRIX : REALITY',
-    'MatrixOverdrive':         'MATRIX : OVERDRIVE',
-    'Matrix:Overdrive':        'MATRIX : OVERDRIVE',
-    'SymphonyBloomed':         'SYMPHONY : BLOOMED',
-    'Symphony:Bloomed':        'SYMPHONY : BLOOMED',
-    'KyawthuiteRemembrance':   'KYAWTHUITE : REMEMBRANCE',
-    'Kyawthuite:Remembrance':  'KYAWTHUITE : REMEMBRANCE',
-    'ShardSurfer':             'SHARD SURFER',
-    'NightmareSky':            'NIGHTMARE SKY',
-    'AfterParty':              'AFTER PARTY',
-    'ImPeach':                 "I'M PEACH",
-    "I'mPeach":                "I'M PEACH",
-  };
-  return MAP[name] ?? MAP[name.toUpperCase()] ?? name.toUpperCase();
-}
-
 function parseLines(content) {
   const results = [];
   const p1 = /\*\*[^*]+\(@([^)]+)\)\*\*\s+(HAS FOUND|HAS CRAFTED)\s+\*\*(.+?)\*\*(?:,\s+CHANCE OF\s+\*\*(1\s+IN\s+[\d,]+)\*\*)?(?:\s+\*\*\[From (.+?)!\]\*\*)?/g;
   const p2 = /\*\*@([^*]+)\*\*\s+(HAS FOUND|HAS CRAFTED)\s+\*\*(.+?)\*\*(?:,\s+CHANCE OF\s+\*\*(1\s+IN\s+[\d,]+)\*\*)?(?:\s+\*\*\[From (.+?)!\]\*\*)?/g;
   let m;
-  while ((m = p1.exec(content)) !== null) results.push({ robloxUsername: m[1].trim(), action: m[2].trim(), auraName: normalizeAuraName(m[3].trim()), chanceStr: m[4]?.trim() ?? null, biome: m[5]?.trim() ?? null });
-  while ((m = p2.exec(content)) !== null) results.push({ robloxUsername: m[1].trim(), action: m[2].trim(), auraName: normalizeAuraName(m[3].trim()), chanceStr: m[4]?.trim() ?? null, biome: m[5]?.trim() ?? null });
+  while ((m = p1.exec(content)) !== null) results.push({ robloxUsername: m[1].trim(), action: m[2].trim(), auraName: m[3].trim(), chanceStr: m[4]?.trim() ?? null, biome: m[5]?.trim() ?? null });
+  while ((m = p2.exec(content)) !== null) results.push({ robloxUsername: m[1].trim(), action: m[2].trim(), auraName: m[3].trim(), chanceStr: m[4]?.trim() ?? null, biome: m[5]?.trim() ?? null });
   return results;
 }
 
@@ -622,15 +538,6 @@ async function handleGlobalEvent(data) {
 
   if (finds.length === 0 && config.verboseLogging) { console.log('[Global] Aucun global parseable.'); return; }
 
-  // Compter seulement les globals des joueurs liés au serveur
-  const linkedUsernames = new Set(Object.values(db).map(u => u.robloxUsername.toLowerCase()));
-  const linkedFinds = finds.filter(f => linkedUsernames.has(f.robloxUsername.toLowerCase()));
-  if (linkedFinds.length > 0) {
-    totalGlobalsDetected += linkedFinds.length;
-    saveCounter();
-    updateBotStatus();
-  }
-
   const db = loadDB();
   const nowUnix = Math.floor(Date.now() / 1000);
 
@@ -644,9 +551,7 @@ async function handleGlobalEvent(data) {
     const tier        = auraInfo?.tier ?? 'TRANSCENDENT';
     const embedColor  = AURA_COLORS[auraName.toUpperCase()] ?? 0x565FF2;
     const tierEmoji   = TIER_EMOJIS[tier] ?? '🌌';
-    const finalChance = (auraInfo?.chance && auraInfo.chance !== 'Unknown')
-      ? auraInfo.chance
-      : (chanceStr ?? auraInfo?.chance ?? 'Inconnue');
+    const finalChance = chanceStr ?? auraInfo?.chance ?? 'Inconnue';
     const auraBiome   = auraInfo?.biome ?? null;
 
     const auraIconURL = getAuraIcon(auraName);
@@ -670,8 +575,7 @@ async function handleGlobalEvent(data) {
       'MONARCH':      (display, u) => `All hail, The **${display}(@${u})**.`,
       'LEVIATHAN':    (display, u) => `**${display}(@${u})** has tamed the **Ruler of Beneath**.`,
       'NEFERKHAF':    (display, u) => `**${display}(@${u})** HAS FOUND   ** Neferkhaf, The Crawler! ** `,
-      'RED MOON':     (display, u) => `**${display}(@${u})** has gotten the **Fragment of Chaos**.`,
-      'MASTER-HAND':  (display, u) => `**${display}(@${u})** has found **MASTER-HAND**.`,
+      'RED MOON':     (display, u) => `**${display}(@${u})** has gotten the ** Fragment of Chaos. **`,
     };
 
     const displayName = userData.displayName ?? robloxUsername;
@@ -684,7 +588,7 @@ async function handleGlobalEvent(data) {
     } else if (specialFn) {
       descriptionLine = specialFn(displayName, robloxUsername);
     } else {
-      descriptionLine = `**${displayName}(@${robloxUsername})** ${action} **${toDisplayName(auraName)}**`;
+      descriptionLine = `**${displayName}(@${robloxUsername})** ${action} **${auraName}**`;
       if (finalChance !== 'Inconnue') descriptionLine += `, CHANCE OF **${finalChance}**`;
       if (biome) descriptionLine += ` **[From ${biome}!]**`;
     }
@@ -724,6 +628,10 @@ async function handleGlobalEvent(data) {
       timestamp: nowUnix,
     });
     saveHistory(history);
+
+    // Compteur total + statut bot
+    totalGlobalsDetected++;
+    updateBotStatus();
 
     if (isTranscendent) console.log(`[Global] 🌌 TRANSCENDANT détecté : "${auraName}" — ${robloxUsername}`);
     if (challengedPing)  console.log(`[Global] 👑 ${tier} : "${auraName}"`);
@@ -781,28 +689,7 @@ const commands = [
         .setDescription('Username Roblox à utiliser (laisser vide = ton propre pseudo)')
         .setRequired(false)
     ),
-  new SlashCommandBuilder()
-    .setName('resetleaderboard')
-    .setDescription("(Admin) Remet à zéro le leaderboard et le compteur de globals")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-  new SlashCommandBuilder()
-    .setName('giveglobal')
-    .setDescription("(Admin) Ajoute manuellement un global à un membre")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addUserOption(opt => opt.setName('user').setDescription('Membre Discord').setRequired(true))
-    .addStringOption(opt =>
-      opt.setName('aura')
-        .setDescription("Nom de l'aura (autocomplete)")
-        .setRequired(true)
-        .setAutocomplete(true)
-    ),
-  new SlashCommandBuilder().setName('guess').setDescription("Mini-jeu : devine l'aura à partir d'un indice cryptique !"),
-  new SlashCommandBuilder().setName('inventaire').setDescription("Scanne ton inventaire Sol's RNG via screenshot pour importer tes globals"),
-  new SlashCommandBuilder().setName('roulette').setDescription("Mini-jeu : roll une aura aléatoire et découvre ton destin !"),
-  new SlashCommandBuilder()
-    .setName('duel')
-    .setDescription("Mini-jeu : affronte un joueur, le plus rare gagne !")
-    .addUserOption(opt => opt.setName('adversaire').setDescription('Le joueur à défier').setRequired(true)),
+  new SlashCommandBuilder().setName('guess').setDescription("Mini-jeu : devine l'aura a partir de sa description !"),
 ].map(c => c.toJSON());
 
 async function registerCommands() {
@@ -822,7 +709,7 @@ async function registerCommands() {
 client.on('interactionCreate', async interaction => {
 
   // ── Autocomplete /testglobal ──
-  if (interaction.isAutocomplete() && (interaction.commandName === 'testglobal' || interaction.commandName === 'giveglobal')) {
+  if (interaction.isAutocomplete() && interaction.commandName === 'testglobal') {
     const focused = interaction.options.getFocused().toUpperCase();
     const gloriousRandom = { name: '🎲 GLORIOUS RANDOM — Une Glorious au hasard', value: 'GLORIOUS RANDOM' };
     const choices = Object.entries(AURA_DB)
@@ -1167,67 +1054,6 @@ client.on('interactionCreate', async interaction => {
   }
 
 
-  // /giveglobal
-  if (commandName === 'giveglobal') {
-    const target   = interaction.options.getUser('user');
-    const auraName = interaction.options.getString('aura').trim().toUpperCase();
-
-    const db = loadDB();
-    if (!db[target.id]) return interaction.reply({ content: `❌ **${target.username}** n'a pas lié son compte Roblox.`, ephemeral: true });
-
-    const auraInfo = getAuraInfo(auraName);
-    if (!auraInfo) return interaction.reply({ content: `❌ Aura **${auraName}** introuvable dans la DB.`, ephemeral: true });
-
-    const nowUnix = Math.floor(Date.now() / 1000);
-    const history = loadHistory();
-    if (!history[target.id]) history[target.id] = [];
-    history[target.id].push({
-      auraName,
-      tier:      auraInfo.tier,
-      chance:    auraInfo.chance,
-      biome:     auraInfo.biome ?? null,
-      timestamp: nowUnix,
-    });
-    saveHistory(history);
-
-    totalGlobalsDetected++;
-    saveCounter();
-    updateBotStatus();
-
-    const tierEmoji = TIER_EMOJIS[auraInfo.tier] ?? '🌟';
-    return interaction.reply({
-      embeds: [new EmbedBuilder()
-        .setTitle('✅ Global ajouté manuellement')
-        .setColor(AURA_COLORS[auraName] ?? TIER_COLORS[auraInfo.tier] ?? DEFAULT_GLOBAL_COLOR)
-        .addFields(
-          { name: '👤 Joueur',   value: `<@${target.id}> (${db[target.id].robloxUsername})`, inline: true },
-          { name: `${tierEmoji} Aura`, value: auraName, inline: true },
-          { name: '🏷️ Tier',    value: auraInfo.tier,   inline: true },
-          { name: '🎲 Chance',  value: auraInfo.chance,  inline: true },
-        )
-        .setFooter({ text: `Ajouté par ${interaction.user.username}` })
-        .setTimestamp()],
-      ephemeral: true,
-    });
-  }
-
-  // /resetleaderboard
-  if (commandName === 'resetleaderboard') {
-    saveHistory({});
-    totalGlobalsDetected = 0;
-    saveCounter();
-    updateBotStatus();
-    return interaction.reply({
-      embeds: [new EmbedBuilder()
-        .setTitle('🗑️ Leaderboard réinitialisé')
-        .setColor(0xFF4500)
-        .setDescription("L'historique de tous les globals et le compteur ont été remis à zéro.")
-        .setFooter({ text: `Réinitialisé par ${interaction.user.username}` })
-        .setTimestamp()],
-      ephemeral: true,
-    });
-  }
-
   // /guess
   if (commandName === 'guess') {
     const auraNames = Object.keys(AURA_DB);
@@ -1322,260 +1148,6 @@ client.on('interactionCreate', async interaction => {
     });
 
     return;
-  }
-
-  // /inventaire
-  if (commandName === 'inventaire') {
-    const db = loadDB();
-    if (!db[interaction.user.id])
-      return interaction.reply({ content: "❌ Tu n'as pas encore lié ton compte. Utilise `/link` d'abord.", ephemeral: true });
-
-    await interaction.reply({
-      embeds: [new EmbedBuilder()
-        .setTitle("📸 Scan d'inventaire Sol's RNG")
-        .setColor(0x7289DA)
-        .setDescription(
-          "Envoie **une ou plusieurs captures d'écran** de ton inventaire Sol's RNG dans ce salon.\n\n" +
-          "⚠️ **Montre uniquement les auras GLORIOUS et TRANSCENDENT.**\n" +
-          "📌 Tu as **2 minutes** pour envoyer tes screenshots.\n" +
-          "✅ Tape `done` quand tu as tout envoyé."
-        )
-        .setFooter({ text: "Seuls les globals (GLORIOUS/TRANSCENDENT) seront importés." })],
-    });
-
-    const screenshots = [];
-    const collector = interaction.channel.createMessageCollector({
-      filter: m => m.author.id === interaction.user.id,
-      time: 120000,
-    });
-
-    collector.on('collect', async msg => {
-      if (msg.content.toLowerCase() === 'done') {
-        collector.stop('done');
-        return;
-      }
-      const images = msg.attachments.filter(a => a.contentType?.startsWith('image/')).map(a => a.url);
-      if (images.length > 0) {
-        screenshots.push(...images);
-        await msg.react('✅').catch(() => {});
-      }
-    });
-
-    collector.on('end', async (_, reason) => {
-      if (screenshots.length === 0) {
-        return interaction.channel.send({ content: `<@${interaction.user.id}> ❌ Aucun screenshot reçu, scan annulé.` });
-      }
-
-      const processingMsg = await interaction.channel.send({
-        embeds: [new EmbedBuilder()
-          .setColor(0xFFA500)
-          .setDescription(`⏳ <@${interaction.user.id}> Analyse de ${screenshots.length} screenshot(s) en cours...`)],
-      });
-
-      try {
-        // Télécharger les images en base64
-        const imageContents = await Promise.all(screenshots.map(async url => {
-          const res  = await fetch(url);
-          const buf  = await res.arrayBuffer();
-          const b64  = Buffer.from(buf).toString('base64');
-          const mime = res.headers.get('content-type') ?? 'image/png';
-          return { type: 'image', source: { type: 'base64', media_type: mime, data: b64 } };
-        }));
-
-        const auraList = Object.keys(AURA_DB)
-          .filter(k => ['GLORIOUS', 'TRANSCENDENT'].includes(AURA_DB[k].tier))
-          .join(', ');
-
-        const promptContent = [
-          ...imageContents,
-          {
-            type: 'text',
-            text: `Tu es un assistant qui analyse des screenshots d'inventaire du jeu Roblox Sol's RNG.
-Voici la liste complète des auras GLORIOUS et TRANSCENDENT possibles dans le jeu :
-${auraList}
-
-Regarde attentivement chaque screenshot et liste UNIQUEMENT les auras de tier GLORIOUS ou TRANSCENDENT que tu vois dans l'inventaire.
-Réponds UNIQUEMENT avec un JSON valide sous cette forme exacte, sans texte avant ni après :
-{"auras": ["NOM_AURA_1", "NOM_AURA_2"]}
-Si tu n'en vois aucune, réponds : {"auras": []}
-Utilise exactement les noms tels qu'ils apparaissent dans la liste fournie.`,
-          },
-        ];
-
-        const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': config.anthropicKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({
-            model: 'claude-opus-4-5',
-            max_tokens: 1024,
-            messages: [{ role: 'user', content: promptContent }],
-          }),
-        });
-
-        const apiData = await apiRes.json();
-        const rawText = apiData?.content?.map(c => c.text ?? '').join('') ?? '';
-        const clean   = rawText.replace(/```json|```/g, '').trim();
-        let detected  = [];
-        try { detected = JSON.parse(clean).auras ?? []; } catch {}
-
-        if (detected.length === 0) {
-          return processingMsg.edit({
-            embeds: [new EmbedBuilder()
-              .setColor(0xED4245)
-              .setDescription(`❌ <@${interaction.user.id}> Aucune aura GLORIOUS/TRANSCENDENT détectée dans les screenshots.`)],
-          });
-        }
-
-        // Normaliser et dédupliquer
-        const normalized = [...new Set(detected.map(n => n.toUpperCase().trim()).filter(n => AURA_DB[n]))];
-
-        if (normalized.length === 0) {
-          return processingMsg.edit({
-            embeds: [new EmbedBuilder()
-              .setColor(0xED4245)
-              .setDescription(`❌ <@${interaction.user.id}> Aucune aura reconnue dans la DB. Vérifie tes screenshots.`)],
-          });
-        }
-
-        // Sauvegarder dans l'historique
-        const history  = loadHistory();
-        const nowUnix  = Math.floor(Date.now() / 1000);
-        if (!history[interaction.user.id]) history[interaction.user.id] = [];
-
-        const existingNames = new Set(history[interaction.user.id].map(e => e.auraName));
-        const newAuras      = normalized.filter(n => !existingNames.has(n));
-        const dupAuras      = normalized.filter(n => existingNames.has(n));
-
-        for (const auraName of newAuras) {
-          const info = AURA_DB[auraName];
-          history[interaction.user.id].push({
-            auraName,
-            tier:      info.tier,
-            chance:    info.chance,
-            biome:     info.biome ?? null,
-            timestamp: nowUnix,
-          });
-        }
-        saveHistory(history);
-
-        // Mettre à jour le compteur
-        if (newAuras.length > 0) {
-          totalGlobalsDetected += newAuras.length;
-          saveCounter();
-          updateBotStatus();
-        }
-
-        // Embed récap
-        const addedLines = newAuras.map(n => {
-          const info = AURA_DB[n];
-          const emoji = TIER_EMOJIS[info.tier] ?? '🌟';
-          return `${emoji} **${toDisplayName(n)}** — ${info.chance}`;
-        }).join('\n');
-
-        const dupLines = dupAuras.length > 0
-          ? `\n\n⚠️ Déjà dans ton historique (ignorés) :\n${dupAuras.map(n => `• ${toDisplayName(n)}`).join('\n')}`
-          : '';
-
-        return processingMsg.edit({
-          embeds: [new EmbedBuilder()
-            .setTitle('✅ Inventaire importé !')
-            .setColor(0x57F287)
-            .setDescription(`<@${interaction.user.id}> **${newAuras.length}** nouvelle(s) aura(s) ajoutée(s) :\n\n${addedLines}${dupLines}`)
-            .setFooter({ text: `${screenshots.length} screenshot(s) analysé(s)` })
-            .setTimestamp()],
-        });
-
-      } catch (err) {
-        console.error('[Inventaire] Erreur:', err);
-        return processingMsg.edit({
-          embeds: [new EmbedBuilder()
-            .setColor(0xED4245)
-            .setDescription(`❌ <@${interaction.user.id}> Erreur lors de l'analyse. Réessaie plus tard.`)],
-        });
-      }
-    });
-
-    return;
-  }
-
-  // /roulette
-  if (commandName === 'roulette') {
-    const auraNames = Object.keys(AURA_DB);
-    const rolled    = auraNames[Math.floor(Math.random() * auraNames.length)];
-    const info      = AURA_DB[rolled];
-    const tierEmoji = TIER_EMOJIS[info.tier] ?? '🌟';
-    const color     = AURA_COLORS[rolled] ?? TIER_COLORS[info.tier] ?? DEFAULT_GLOBAL_COLOR;
-
-    const ROULETTE_COMMENTS = {
-      TRANSCENDENT: ["🌌 L'univers t'a choisi...", "✨ Incroyable, le destin est avec toi !", "🔮 Une force cosmique t'a béni."],
-      GLORIOUS:     ["🏆 Impressionnant ! Tu as de la chance.", "⚡ Pas mal du tout !", "🌟 Belle roll !"],
-      RARE:         ["👌 Correct.", "🎯 Solide.", "💫 C'est déjà ça !"],
-      UNCOMMON:     ["😬 Bof...", "🙃 On a vu mieux.", "😅 Pas de chance..."],
-      COMMON:       ["💀 RIP.", "😂 C'est tout ?", "🗑️ Même pas rare..."],
-    };
-    const comments = ROULETTE_COMMENTS[info.tier] ?? ROULETTE_COMMENTS.COMMON;
-    const comment  = comments[Math.floor(Math.random() * comments.length)];
-
-    return interaction.reply({
-      embeds: [new EmbedBuilder()
-        .setTitle(`🎰 Roulette Sol's RNG`)
-        .setColor(color)
-        .setDescription(`<@${interaction.user.id}> a rollé...\n\n## ${tierEmoji} **${toDisplayName(rolled)}**\n\n*${comment}*`)
-        .addFields(
-          { name: '🏷️ Tier',   value: info.tier,   inline: true },
-          { name: '🎲 Chance', value: info.chance,  inline: true },
-        )
-        .setThumbnail(getAuraIcon(rolled))
-        .setTimestamp()],
-    });
-  }
-
-  // /duel
-  if (commandName === 'duel') {
-    const opponent = interaction.options.getUser('adversaire');
-    if (opponent.id === interaction.user.id)
-      return interaction.reply({ content: '❌ Tu ne peux pas te défier toi-même !', ephemeral: true });
-    if (opponent.bot)
-      return interaction.reply({ content: '❌ Tu ne peux pas défier un bot !', ephemeral: true });
-
-    const auraNames = Object.keys(AURA_DB);
-    const roll1     = auraNames[Math.floor(Math.random() * auraNames.length)];
-    const roll2     = auraNames[Math.floor(Math.random() * auraNames.length)];
-    const info1     = AURA_DB[roll1];
-    const info2     = AURA_DB[roll2];
-
-    // Comparer par chance (plus petit dénominateur = plus rare = gagne)
-    function parseChance(str) {
-      const m = str?.replace(/,/g, '').match(/[\d]+$/);
-      return m ? parseInt(m[0]) : 999999999;
-    }
-    const chance1 = parseChance(info1.chance);
-    const chance2 = parseChance(info2.chance);
-
-    const tierEmoji1 = TIER_EMOJIS[info1.tier] ?? '🌟';
-    const tierEmoji2 = TIER_EMOJIS[info2.tier] ?? '🌟';
-
-    let resultLine;
-    if (chance1 > chance2) {
-      resultLine = `🏆 **<@${opponent.id}>** gagne avec **${toDisplayName(roll2)}** (${info2.chance}) !`;
-    } else if (chance2 > chance1) {
-      resultLine = `🏆 **<@${interaction.user.id}>** gagne avec **${toDisplayName(roll1)}** (${info1.chance}) !`;
-    } else {
-      resultLine = `🤝 **Égalité !** Les deux ont la même chance.`;
-    }
-
-    return interaction.reply({
-      embeds: [new EmbedBuilder()
-        .setTitle('⚔️ Duel Sol\'s RNG')
-        .setColor(0xE91E63)
-        .addFields(
-          { name: `<@${interaction.user.id}>`, value: `${tierEmoji1} **${toDisplayName(roll1)}**\n${info1.chance}`, inline: true },
-          { name: 'VS', value: '⚡', inline: true },
-          { name: `<@${opponent.id}>`, value: `${tierEmoji2} **${toDisplayName(roll2)}**\n${info2.chance}`, inline: true },
-          { name: '🏁 Résultat', value: resultLine, inline: false },
-        )
-        .setTimestamp()],
-    });
   }
 
   // /forcesync
@@ -1677,5 +1249,6 @@ http.createServer((req, res) => res.end('Bot en ligne!')).listen(PORT, () => {
   console.log('[HTTP] Serveur keep-alive sur port', PORT);
 });
 
+client.login(config.token);
 client.login(config.token);
 
