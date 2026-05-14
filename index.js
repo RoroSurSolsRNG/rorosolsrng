@@ -32,7 +32,6 @@ try {
   };
 }
 
-// Channel admin pour les logs privés
 const ADMIN_LOG_CHANNEL_ID = '1448744993283113133';
 
 const client = new Client({
@@ -64,7 +63,6 @@ function saveHistory(data) {
   fs.writeFileSync(HISTORY_PATH, JSON.stringify(data, null, 2));
 }
 
-// Compteur total de globals détectés (pour le statut du bot)
 let totalGlobalsDetected = 0;
 function initTotalGlobals() {
   const h = loadHistory();
@@ -93,133 +91,147 @@ async function getRobloxUserId(username) {
   }
 }
 
-// ────────────────────────────────────────────────────────────
-//  Base de données COMPLÈTE des auras globals (100M+)
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+//  BASE DE DONNÉES DES AURAS — 100M+ seulement (+ Challenged/Challenged+)
+// ════════════════════════════════════════════════════════════
 const AURA_DB = {
+
   // ══ CHALLENGED+ ══
-  'MONARCH':                    { chance: '1 IN 3,000,000,000',   tier: 'CHALLENGED+', biome: 'CORRUPTION / GLITCHED' },
-  'LEVIATHAN':                  { chance: '1 IN 1,730,400,000',   tier: 'CHALLENGED+', biome: 'RAINY' },
-  'ASTRAIOS':                   { chance: '1 IN 1,750,000,000',   tier: 'CHALLENGED+', biome: 'SINGULARITY' },
-  'OBLIVION':                   { chance: '1 IN 2,000 [Oblivion Potion]', tier: 'CHALLENGED+' },
-  'OPPRESSION':                 { chance: '1 IN 220,000,000',     tier: 'CHALLENGED+', biome: 'HELL' },
-  'DREAMATRIC':                 { chance: '1 IN 320,000,000',     tier: 'CHALLENGED+', biome: 'DREAMSPACE' },
+  'MONARCH':                    { chance: '1 IN 3,000,000,000',   tier: 'CHALLENGED+', biome: 'CORRUPTION / GLITCHED', rarity: 3000000000 },
+  'LEVIATHAN':                  { chance: '1 IN 1,730,400,000',   tier: 'CHALLENGED+', biome: 'RAINY',                 rarity: 1730400000 },
+  'ASTRAIOS':                   { chance: '1 IN 1,750,000,000',   tier: 'CHALLENGED+', biome: 'SINGULARITY',           rarity: 1750000000 },
+  'OBLIVION':                   { chance: '1 IN 2,000 [Oblivion Potion]', tier: 'CHALLENGED+',                         rarity: 999999999  },
+  'OPPRESSION':                 { chance: '1 IN 220,000,000',     tier: 'CHALLENGED+', biome: 'HELL',                  rarity: 220000000  },
+  'DREAMATRIC':                 { chance: '1 IN 320,000,000',     tier: 'CHALLENGED+', biome: 'DREAMSPACE',            rarity: 320000000  },
+  'ILLUSIONARY':                { chance: '1 IN 10,000,000',      tier: 'CHALLENGED+', biome: 'DREAMSPACE',            rarity: 10000000   },
 
   // ══ CHALLENGED ══
-  'GLITCH':                     { chance: '1 IN 12,210,110',      tier: 'CHALLENGED',  biome: 'GLITCHED' },
-  'NEFERKHAF':                  { chance: '1 IN 1,000 [Potion of Dune]', tier: 'CHALLENGED' },
-  'RED MOON':                   { chance: '1 IN 1,000 [Red Moon Potion]', tier: 'CHALLENGED' },
-  'MEMORY':                     { chance: '1 IN 100 [Oblivion Potion]', tier: 'CHALLENGED' },
-  'BOREALIS':                   { chance: '1 IN 13,333,333',      tier: 'CHALLENGED',  biome: 'STARFALL' },
+  'GLITCH':                     { chance: '1 IN 12,210,110',      tier: 'CHALLENGED',  biome: 'GLITCHED',              rarity: 12210110   },
+  'NEFERKHAF':                  { chance: '1 IN 1,000 [Potion of Dune]', tier: 'CHALLENGED',                           rarity: 888888888  },
+  'RED MOON':                   { chance: '1 IN 1,000 [Red Moon Potion]', tier: 'CHALLENGED',                          rarity: 777777777  },
+  'MEMORY':                     { chance: '1 IN 100 [Oblivion Potion]',   tier: 'CHALLENGED',                          rarity: 666666666  },
+  'BOREALIS':                   { chance: '1 IN 13,333,333',      tier: 'CHALLENGED',  biome: 'STARFALL',              rarity: 13333333   },
 
   // ══ TRANSCENDENT ══
-  'EQUINOX':                    { chance: '1 IN 2,500,000,000',   tier: 'TRANSCENDENT' },
-  'BREAKTHROUGH':               { chance: '1 IN 1,999,999,999',   tier: 'TRANSCENDENT' },
-  'LUMINOSITY':                 { chance: '1 IN 1,200,000,000',   tier: 'TRANSCENDENT', biome: 'HEAVEN' },
-  'PIXELATION':                 { chance: '1 IN 1,073,741,824',   tier: 'TRANSCENDENT', biome: 'CYBERSPACE' },
-  'NYCTOPHOBIA':                { chance: '1 IN 1,011,111,010',   tier: 'TRANSCENDENT', biome: 'NULL' },
-  'MASTER-HAND':                { chance: 'Unknown',              tier: 'TRANSCENDENT' },
-  'ILLUSIONARY':                { chance: '1 IN 10,000,000',      tier: 'CHALLENGED+', biome: 'DREAMSPACE' },
+  'EQUINOX':                    { chance: '1 IN 2,500,000,000',   tier: 'TRANSCENDENT',                                rarity: 2500000000 },
+  'BREAKTHROUGH':               { chance: '1 IN 1,999,999,999',   tier: 'TRANSCENDENT',                                rarity: 1999999999 },
+  'LUMINOSITY':                 { chance: '1 IN 1,200,000,000',   tier: 'TRANSCENDENT', biome: 'HEAVEN',               rarity: 1200000000 },
+  'PIXELATION':                 { chance: '1 IN 1,073,741,824',   tier: 'TRANSCENDENT', biome: 'CYBERSPACE',           rarity: 1073741824 },
+  'NYCTOPHOBIA':                { chance: '1 IN 1,011,111,010',   tier: 'TRANSCENDENT', biome: 'NULL',                 rarity: 1011111010 },
+  'MASTER-HAND':                { chance: 'Unknown',               tier: 'TRANSCENDENT',                                rarity: 9999999999 },
+  'EGGIS':                      { chance: '1 IN 1,150,000,000',   tier: 'TRANSCENDENT',                                rarity: 1150000000 },
+  'YOLKEGG':                    { chance: '1 IN 1,790,909,090',   tier: 'TRANSCENDENT',                                rarity: 1790909090 },
 
-  // ══ GLORIOUS — S-TIER (800M+) ══
-  'AEGIS':                      { chance: '1 IN 825,000,000',     tier: 'GLORIOUS' },
-  'RUINS : WITHERED':           { chance: '1 IN 800,000,000',     tier: 'GLORIOUS' },
-  'APOSTOLOS : VEIL':           { chance: '1 IN 800,000,000',     tier: 'GLORIOUS' },
+  // ══ GLORIOUS — 800M+ ══
+  'AEGIS':                      { chance: '1 IN 825,000,000',     tier: 'GLORIOUS',                                    rarity: 825000000  },
+  'RUINS : WITHERED':           { chance: '1 IN 800,000,000',     tier: 'GLORIOUS',                                    rarity: 800000000  },
+  'APOSTOLOS : VEIL':           { chance: '1 IN 800,000,000',     tier: 'GLORIOUS',                                    rarity: 800000000  },
 
-  // ══ GLORIOUS — A-TIER ══
-  'PAROL':                      { chance: '1 IN 760,000,000',     tier: 'GLORIOUS' },
-  'SOVEREIGN':                  { chance: '1 IN 750,000,000',     tier: 'GLORIOUS' },
-  'BANSHEE':                    { chance: '1 IN 730,000,000',     tier: 'GLORIOUS', biome: 'NULL' },
-  'MALEDICTION':                { chance: '1 IN 730,000,000',     tier: 'GLORIOUS' },
-  'WRAITHLIGHT':                { chance: '1 IN 695,000,000',     tier: 'GLORIOUS' },
-  'PROLOGUE':                   { chance: '1 IN 666,616,111',     tier: 'GLORIOUS' },
-  'PYTHOS':                     { chance: '1 IN 666,666,666',     tier: 'GLORIOUS' },
-  'HARVESTER':                  { chance: '1 IN 666,000,000',     tier: 'GLORIOUS', biome: 'HELL' },
-  'APOCALYPSE':                 { chance: '1 IN 624,000,000',     tier: 'GLORIOUS', biome: 'CORRUPTION' },
-  'MATRIX : REALITY':           { chance: '1 IN 601,020,102',     tier: 'GLORIOUS', biome: 'CYBERSPACE' },
-  'SOPHYRA':                    { chance: '1 IN 570,000,000',     tier: 'GLORIOUS' },
-  'ELUDE':                      { chance: '1 IN 555,555,555',     tier: 'GLORIOUS' },
-  'MATRIX : OVERDRIVE':         { chance: '1 IN 503,000,000',     tier: 'GLORIOUS', biome: 'CYBERSPACE' },
-  'RUINS':                      { chance: '1 IN 500,000,000',     tier: 'GLORIOUS' },
-  'PHANTASMA':                  { chance: '1 IN 462,000,000',     tier: 'GLORIOUS' },
-  'KYAWTHUITE : REMEMBRANCE':   { chance: '1 IN 450,000,000',     tier: 'GLORIOUS' },
-  'UNKNOWN':                    { chance: '1 IN 444,444,444',     tier: 'GLORIOUS' },
-  'APOSTOLOS':                  { chance: '1 IN 444,000,000',     tier: 'GLORIOUS' },
-  'AFTER PARTY':                { chance: '1 IN 440,000,000',     tier: 'GLORIOUS' },
-  'GARGANTUA':                  { chance: '1 IN 430,000,000',     tier: 'GLORIOUS' },
-  'NORTHERN':                   { chance: '1 IN 405,000,000',     tier: 'GLORIOUS', biome: 'WINDY' },
-  'ABYSSAL HUNTER':             { chance: '1 IN 400,000,000',     tier: 'GLORIOUS', biome: 'RAINY' },
-  "I'M PEACH":                  { chance: '1 IN 400,000,000',     tier: 'GLORIOUS' },
-  'CRYOFANG':                   { chance: '1 IN 380,000,000',     tier: 'GLORIOUS', biome: 'SNOWY' },
-  'SYMPHONY : BLOOMED':         { chance: '1 IN 375,000,000',     tier: 'GLORIOUS' },
-  'CHILLSEAR':                  { chance: '1 IN 375,000,000',     tier: 'GLORIOUS' },
-  'FLORA : EVERGREEN':          { chance: '1 IN 370,073,730',     tier: 'GLORIOUS' },
-  'ATLAS':                      { chance: '1 IN 360,000,000',     tier: 'GLORIOUS' },
-  'ORCHESTRA':                  { chance: '1 IN 336,870,912',     tier: 'GLORIOUS' },
-  'LOTUSFALL':                  { chance: '1 IN 320,000,000',     tier: 'GLORIOUS' },
-  'PERPETUAL':                  { chance: '1 IN 315,000,000',     tier: 'GLORIOUS' },
-  'MAELSTROM':                  { chance: '1 IN 309,999,999',     tier: 'GLORIOUS' },
-  'OVERTURE : HISTORY':         { chance: '1 IN 300,000,000',     tier: 'GLORIOUS' },
-  'BLOODLUST':                  { chance: '1 IN 300,000,000',     tier: 'GLORIOUS', biome: 'CORRUPTION' },
-  'EXOTIC VOID':                { chance: '1 IN 299,999,999',     tier: 'GLORIOUS' },
-  'GRAVEBORN':                  { chance: '1 IN 290,000,000',     tier: 'GLORIOUS' },
-  'PROPHECY':                   { chance: '1 IN 275,649,430',     tier: 'GLORIOUS' },
-  'ASTRAL : ZODIAC':            { chance: '1 IN 267,200,000',     tier: 'GLORIOUS' },
-  'ARCHANGEL':                  { chance: '1 IN 250,000,000',     tier: 'GLORIOUS', biome: 'HEAVEN' },
-  'ENCASE':                     { chance: '1 IN 230,000,000',     tier: 'GLORIOUS' },
-  'HYPER-VOLT : EVER-STORM':    { chance: '1 IN 225,000,000',     tier: 'GLORIOUS' },
-  'SHARD SURFER':               { chance: '1 IN 225,000,000',     tier: 'GLORIOUS' },
-  'LUMENPOOL':                  { chance: '1 IN 220,000,000',     tier: 'GLORIOUS' },
-  'IMPEACHED':                  { chance: '1 IN 200,000,000',     tier: 'GLORIOUS' },
-  'NIGHTMARE SKY':              { chance: '1 IN 190,000,000',     tier: 'GLORIOUS', biome: 'DREAMSPACE' },
-  'TWILIGHT : WITHERING GRACE': { chance: '1 IN 180,000,000',     tier: 'GLORIOUS' },
-  'FELLED':                     { chance: '1 IN 180,000,000',     tier: 'GLORIOUS' },
-  'SYMPHONY':                   { chance: '1 IN 175,000,000',     tier: 'GLORIOUS' },
-  'OVERTURE':                   { chance: '1 IN 150,000,000',     tier: 'GLORIOUS' },
-  'CRIMSON':                    { chance: '1 IN 120,000,000',     tier: 'GLORIOUS' },
-  'STARSCOURGE : RADIANT':      { chance: '1 IN 100,000,000',     tier: 'GLORIOUS', biome: 'STARFALL' },
-  'SPECTRAFLOW':                { chance: '1 IN 100,000,000',     tier: 'GLORIOUS' },
-  'CHROMATIC : GENESIS':        { chance: '1 IN 99,999,999',      tier: 'GLORIOUS' },
+  // ══ GLORIOUS — 700M–799M ══
+  'PAROL':                      { chance: '1 IN 760,000,000',     tier: 'GLORIOUS',                                    rarity: 760000000  },
+  'SOVEREIGN':                  { chance: '1 IN 750,000,000',     tier: 'GLORIOUS',                                    rarity: 750000000  },
+  'BANSHEE':                    { chance: '1 IN 730,000,000',     tier: 'GLORIOUS', biome: 'NULL',                     rarity: 730000000  },
+  'MALEDICTION':                { chance: '1 IN 730,000,000',     tier: 'GLORIOUS',                                    rarity: 730000000  },
+  'WRAITHLIGHT':                { chance: '1 IN 695,000,000',     tier: 'GLORIOUS',                                    rarity: 695000000  },
 
-  // ══ EASTER EGGS ══
-  'EGGIS':                      { chance: '1 IN 1,150,000,000',   tier: 'TRANSCENDENT' },
-  'YOLKEGG':                    { chance: '1 IN 1,790,909,090',   tier: 'TRANSCENDENT' },
+  // ══ GLORIOUS — 600M–699M ══
+  'PROLOGUE':                   { chance: '1 IN 666,616,111',     tier: 'GLORIOUS',                                    rarity: 666616111  },
+  'PYTHOS':                     { chance: '1 IN 666,666,666',     tier: 'GLORIOUS',                                    rarity: 666666666  },
+  'HARVESTER':                  { chance: '1 IN 666,000,000',     tier: 'GLORIOUS', biome: 'HELL',                     rarity: 666000000  },
+  'APOCALYPSE':                 { chance: '1 IN 624,000,000',     tier: 'GLORIOUS', biome: 'CORRUPTION',               rarity: 624000000  },
+  'MATRIX : REALITY':           { chance: '1 IN 601,020,102',     tier: 'GLORIOUS', biome: 'CYBERSPACE',               rarity: 601020102  },
+
+  // ══ GLORIOUS — 500M–599M ══
+  'SOPHYRA':                    { chance: '1 IN 570,000,000',     tier: 'GLORIOUS',                                    rarity: 570000000  },
+  'ELUDE':                      { chance: '1 IN 555,555,555',     tier: 'GLORIOUS',                                    rarity: 555555555  },
+  'MATRIX : OVERDRIVE':         { chance: '1 IN 503,000,000',     tier: 'GLORIOUS', biome: 'CYBERSPACE',               rarity: 503000000  },
+  'RUINS':                      { chance: '1 IN 500,000,000',     tier: 'GLORIOUS',                                    rarity: 500000000  },
+
+  // ══ GLORIOUS — 400M–499M ══
+  'PHANTASMA':                  { chance: '1 IN 462,000,000',     tier: 'GLORIOUS',                                    rarity: 462000000  },
+  'KYAWTHUITE : REMEMBRANCE':   { chance: '1 IN 450,000,000',     tier: 'GLORIOUS',                                    rarity: 450000000  },
+  'UNKNOWN':                    { chance: '1 IN 444,444,444',     tier: 'GLORIOUS',                                    rarity: 444444444  },
+  'APOSTOLOS':                  { chance: '1 IN 444,000,000',     tier: 'GLORIOUS',                                    rarity: 444000000  },
+  'AFTER PARTY':                { chance: '1 IN 440,000,000',     tier: 'GLORIOUS',                                    rarity: 440000000  },
+  'GARGANTUA':                  { chance: '1 IN 430,000,000',     tier: 'GLORIOUS',                                    rarity: 430000000  },
+  'NORTHERN':                   { chance: '1 IN 405,000,000',     tier: 'GLORIOUS', biome: 'WINDY',                    rarity: 405000000  },
+  'ABYSSAL HUNTER':             { chance: '1 IN 400,000,000',     tier: 'GLORIOUS', biome: 'RAINY',                    rarity: 400000000  },
+  "I'M PEACH":                  { chance: '1 IN 400,000,000',     tier: 'GLORIOUS',                                    rarity: 400000000  },
+
+  // ══ GLORIOUS — 300M–399M ══
+  'CRYOFANG':                   { chance: '1 IN 380,000,000',     tier: 'GLORIOUS', biome: 'SNOWY',                    rarity: 380000000  },
+  'SYMPHONY : BLOOMED':         { chance: '1 IN 375,000,000',     tier: 'GLORIOUS',                                    rarity: 375000000  },
+  'CHILLSEAR':                  { chance: '1 IN 375,000,000',     tier: 'GLORIOUS',                                    rarity: 375000000  },
+  'FLORA : EVERGREEN':          { chance: '1 IN 370,073,730',     tier: 'GLORIOUS',                                    rarity: 370073730  },
+  'ATLAS':                      { chance: '1 IN 360,000,000',     tier: 'GLORIOUS',                                    rarity: 360000000  },
+  'ORCHESTRA':                  { chance: '1 IN 336,870,912',     tier: 'GLORIOUS',                                    rarity: 336870912  },
+  'LOTUSFALL':                  { chance: '1 IN 320,000,000',     tier: 'GLORIOUS',                                    rarity: 320000000  },
+  'PERPETUAL':                  { chance: '1 IN 315,000,000',     tier: 'GLORIOUS',                                    rarity: 315000000  },
+  'MAELSTROM':                  { chance: '1 IN 309,999,999',     tier: 'GLORIOUS',                                    rarity: 309999999  },
+  'OVERTURE : HISTORY':         { chance: '1 IN 300,000,000',     tier: 'GLORIOUS',                                    rarity: 300000000  },
+  'BLOODLUST':                  { chance: '1 IN 300,000,000',     tier: 'GLORIOUS', biome: 'CORRUPTION',               rarity: 300000000  },
+  'EXOTIC VOID':                { chance: '1 IN 299,999,999',     tier: 'GLORIOUS',                                    rarity: 299999999  },
+  'GRAVEBORN':                  { chance: '1 IN 290,000,000',     tier: 'GLORIOUS',                                    rarity: 290000000  },
+  'PROPHECY':                   { chance: '1 IN 275,649,430',     tier: 'GLORIOUS',                                    rarity: 275649430  },
+  'ASTRAL : ZODIAC':            { chance: '1 IN 267,200,000',     tier: 'GLORIOUS',                                    rarity: 267200000  },
+  'ARCHANGEL':                  { chance: '1 IN 250,000,000',     tier: 'GLORIOUS', biome: 'HEAVEN',                   rarity: 250000000  },
+  'ENCASE':                     { chance: '1 IN 230,000,000',     tier: 'GLORIOUS',                                    rarity: 230000000  },
+  'HYPER-VOLT : EVER-STORM':    { chance: '1 IN 225,000,000',     tier: 'GLORIOUS',                                    rarity: 225000000  },
+  'SHARD SURFER':               { chance: '1 IN 225,000,000',     tier: 'GLORIOUS',                                    rarity: 225000000  },
+  'LUMENPOOL':                  { chance: '1 IN 220,000,000',     tier: 'GLORIOUS',                                    rarity: 220000000  },
+  'IMPEACHED':                  { chance: '1 IN 200,000,000',     tier: 'GLORIOUS',                                    rarity: 200000000  },
+
+  // ══ GLORIOUS — 100M–199M ══
+  'NIGHTMARE SKY':              { chance: '1 IN 190,000,000',     tier: 'GLORIOUS', biome: 'DREAMSPACE',               rarity: 190000000  },
+  'TWILIGHT : WITHERING GRACE': { chance: '1 IN 180,000,000',     tier: 'GLORIOUS',                                    rarity: 180000000  },
+  'FELLED':                     { chance: '1 IN 180,000,000',     tier: 'GLORIOUS',                                    rarity: 180000000  },
+  'SYMPHONY':                   { chance: '1 IN 175,000,000',     tier: 'GLORIOUS',                                    rarity: 175000000  },
+  'OVERTURE':                   { chance: '1 IN 150,000,000',     tier: 'GLORIOUS',                                    rarity: 150000000  },
+  'CRIMSON':                    { chance: '1 IN 120,000,000',     tier: 'GLORIOUS',                                    rarity: 120000000  },
+  'POINT: ZERO':                { chance: '1 IN 120,000,000',     tier: 'GLORIOUS', biome: 'SINGULARITY',              rarity: 120000000  },
+  'STARSCOURGE : RADIANT':      { chance: '1 IN 100,000,000',     tier: 'GLORIOUS', biome: 'STARFALL',                 rarity: 100000000  },
+  'SPECTRAFLOW':                { chance: '1 IN 100,000,000',     tier: 'GLORIOUS',                                    rarity: 100000000  },
+  'CHROMATIC : GENESIS':        { chance: '1 IN 99,999,999',      tier: 'GLORIOUS',                                    rarity: 99999999   },
+
+  // ══ MYTHIC (inclus car > Glorious en rareté de gameplay) ══
+  'ASTRONAUT':                  { chance: '1 IN 6,117,156',       tier: 'MYTHIC',  biome: 'SINGULARITY',               rarity: 6117156    },
+  'COMET: FALLEN':              { chance: '1 IN 15,000,000',      tier: 'MYTHIC',  biome: 'STARFALL',                   rarity: 15000000   },
+  'TWILIGHT':                   { chance: '1 IN 20,000,000',      tier: 'MYTHIC',                                       rarity: 20000000   },
+  'TWILIGHT: IRIDESCENT':       { chance: '1 IN 60,000,000',      tier: 'MYTHIC',                                       rarity: 60000000   },
+  'SHARD SURFER (MYTHIC)':      { chance: '1 IN 75,000,000',      tier: 'MYTHIC',  biome: 'SNOWY',                      rarity: 75000000   },
+  'SAILOR: FLYING DUTCHMAN':    { chance: '1 IN 80,000,000',      tier: 'MYTHIC',  biome: 'RAINY',                      rarity: 80000000   },
 };
 
-// ────────────────────────────────────────────────────────────
-//  Icônes des auras
-// ────────────────────────────────────────────────────────────
-const AURA_ICONS = {
-  'EQUINOX':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502306710080065576/EQUINOX_star.png?ex=69ff3ba7&is=69fdea27&hm=2bcff38367b53f03230215b5a9ffa3a3f1aba54fb8a21e6b004c3d9db3e657f3&',
-  'BREAKTHROUGH': 'https://cdn.discordapp.com/attachments/1125441054313816145/1502306756871721121/BREAKTHROUGH_star.png?ex=69ff3bb2&is=69fdea32&hm=a3886a96f8307b19ffc84a055d724baab16d2166d7abf336d59aa0b46a6c43af&',
-  'LEVIATHAN':    'https://cdn.discordapp.com/attachments/1125441054313816145/1502306798994981076/LEVIATHAN_star.png?ex=69ff3bbc&is=69fdea3c&hm=be4b1918023c56580a28b44e501b8b04eb27045e76f33a5472d8f849d1184776&',
-  'EGGIS':        'https://cdn.discordapp.com/attachments/1125441054313816145/1502306830079099032/EGGIS_star.png?ex=69ff3bc3&is=69fdea43&hm=ec0ede547adbe2f2f2e4ab47d27f9ec6520ca79191241e070f8e074f786ab8e3&',
-  'DREAMATRIC':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502306855513358467/DREAMETRIC_star.png?ex=69ff3bc9&is=69fdea49&hm=0c285c88c37f10387efd34b00ff033017604d723c58298587d3b82e78b760747&',
-  'BOREALIS':     'https://cdn.discordapp.com/attachments/1125441054313816145/1502306876149465220/BOREALIS_star.png?ex=69ff3bce&is=69fdea4e&hm=6c62f137bfa7f26653c34e271ecae71b5b8f4b2813bf0405da7f0b553fc9c699&',
-  'LUMINOSITY':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502306895799652492/LUMI_star.png?ex=69ff3bd3&is=69fdea53&hm=bcaa64d07112ddf8c06dde7e1f52a754e066e27a3256e719cdf5f5f90ffc52f1&',
-  'OPPRESSION':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502306918256083186/OPPRESSION_star.png?ex=69ff3bd8&is=69fdea58&hm=408043990ddce1e1338225093f253d487293501156351dd5ea4dd82dfb3e312c&',
-  'GLITCH':       'https://cdn.discordapp.com/attachments/1125441054313816145/1502306934311882792/GLITCH_star.png?ex=69ff3bdc&is=69fdea5c&hm=dd2a3b87cf1ab9cfc78e3f7bfbecde754204ab04d72d2b0868a6f3c359ac759f&',
-  'MONARCH':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502306953689301002/MONARCH_star.png?ex=69ff3be1&is=69fdea61&hm=4bf4fd4478e1b3d49cfc78e3f7bfbecde754204ab04d72d2b0868a6f3c359ac759f&',
-  'NYCTOPHOBIA':  'https://cdn.discordapp.com/attachments/1125441054313816145/1502306969451761704/NYCTO_star.png?ex=69ff3be5&is=69fdea65&hm=a86f289ce9d6a98f580544967f261198017efad80780ea77e81e3a23b33d95f6&',
-  'YOLKEGG':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502307034694156360/YOLKEGG_star.png?ex=69ff3bf4&is=69fdea74&hm=4b61bb98c16869eb1bb0d4457b02fd7289aa36b2342250a27de741567d6acba5&',
-  'PIXELATION':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502307053090373723/Pixelation_star.png?ex=69ff3bf8&is=69fdea78&hm=d09e162d4717da68778c8131600e8d031a47406b658998312c5e8eedf8e690b5&',
-  'MEMORY':       'https://cdn.discordapp.com/attachments/1125441054313816145/1502308712310636645/MEMORY_star.png?ex=69ff3d84&is=69fdec04&hm=7bf7f6017042c5553f85aa2a8e8a67cdaec074058fa714b11eccb83860987620&',
-  'ASTRAIOS':     'https://cdn.discordapp.com/attachments/1125441054313816145/1502309321214660869/ASTRAIOS_star.png?ex=69ff3e15&is=69fdec95&hm=16d20b1d7ed3f7a39305b51c3b22677b852c0d0fd1b2aa85c46788ffb7ce9201&',
-  'NEFERKHAF':    'https://cdn.discordapp.com/attachments/1125441054313816145/1502308266502520872/NEFERKHAF_star.png?ex=69ff3d1a&is=69fdeb9a&hm=05ecb48cf6bb9f4d05b11044badb7da2fd3adbef2246d3856a3c2b1f84857584&',
-  'RED MOON':     'https://cdn.discordapp.com/attachments/1125441054313816145/1502308308424458330/Fragment_of_the_crimson_moon_star.png?ex=69ff3d24&is=69fdeba4&hm=d2daca48464340f4c5ca66e25bb3f57aaf6a85f0674596ba6985583bdfaead0f&',
-};
-const DEFAULT_AURA_ICON = 'https://cdn.discordapp.com/attachments/1125441054313816145/1502307077522194482/Global_star.png?ex=69ff3bfe&is=69fdea7e&hm=d5e29a1fd843483a5325dc437dd16d91172f72d1b08b05d79711f90cb2c6bb4d&';
-function getAuraIcon(auraName) {
-  return AURA_ICONS[auraName.toUpperCase()] ?? DEFAULT_AURA_ICON;
-}
+// ════════════════════════════════════════════════════════════
+//  INVENTORY — DB étendue (inclut tout pour analyse screenshot)
+//  Même filtre : 100M+ sauf Challenged/Challenged+
+// ════════════════════════════════════════════════════════════
+const FULL_AURA_DB = { ...AURA_DB };
 
-// Couleurs et emojis par tier
+// ════════════════════════════════════════════════════════════
+//  TIERS — Couleurs, Emojis, Rang
+// ════════════════════════════════════════════════════════════
 const TIER_COLORS = {
   'CHALLENGED+':  0x8B0000,
   'CHALLENGED':   0xFF4500,
   'TRANSCENDENT': 0x00FFFF,
   'GLORIOUS':     0xFFD700,
+  'MYTHIC':       0xE74C3C,
   'EXALTED':      0xFF69B4,
+};
+
+const TIER_EMOJIS = {
+  'CHALLENGED+':  '👑',
+  'CHALLENGED':   '⚔️',
+  'TRANSCENDENT': '🌌',
+  'GLORIOUS':     '🌟',
+  'MYTHIC':       '🔴',
+  'EXALTED':      '💜',
+};
+
+const TIER_RANK = {
+  'MYTHIC': 1, 'GLORIOUS': 2, 'EXALTED': 3,
+  'TRANSCENDENT': 4, 'CHALLENGED': 5, 'CHALLENGED+': 6,
 };
 
 const AURA_COLORS = {
@@ -245,13 +257,34 @@ const AURA_COLORS = {
 };
 
 const DEFAULT_GLOBAL_COLOR = 0x565ff2;
-const TIER_EMOJIS = {
-  'CHALLENGED+':  '👑',
-  'CHALLENGED':   '⚔️',
-  'TRANSCENDENT': '🌌',
-  'GLORIOUS':     '🌟',
-  'EXALTED':      '💜',
+
+// ────────────────────────────────────────────────────────────
+//  Icônes des auras
+// ────────────────────────────────────────────────────────────
+const AURA_ICONS = {
+  'EQUINOX':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502306710080065576/EQUINOX_star.png?ex=69ff3ba7&is=69fdea27&hm=2bcff38367b53f03230215b5a9ffa3a3f1aba54fb8a21e6b004c3d9db3e657f3&',
+  'BREAKTHROUGH': 'https://cdn.discordapp.com/attachments/1125441054313816145/1502306756871721121/BREAKTHROUGH_star.png?ex=69ff3bb2&is=69fdea32&hm=a3886a96f8307b19ffc84a055d724baab16d2166d7abf336d59aa0b46a6c43af&',
+  'LEVIATHAN':    'https://cdn.discordapp.com/attachments/1125441054313816145/1502306798994981076/LEVIATHAN_star.png?ex=69ff3bbc&is=69fdea3c&hm=be4b1918023c56580a28b44e501b8b04eb27045e76f33a5472d8f849d1184776&',
+  'EGGIS':        'https://cdn.discordapp.com/attachments/1125441054313816145/1502306830079099032/EGGIS_star.png?ex=69ff3bc3&is=69fdea43&hm=ec0ede547adbe2f2f2e4ab47d27f9ec6520ca79191241e070f8e074f786ab8e3&',
+  'DREAMATRIC':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502306855513358467/DREAMETRIC_star.png?ex=69ff3bc9&is=69fdea49&hm=0c285c88c37f10387efd34b00ff033017604d723c58298587d3b82e78b760747&',
+  'BOREALIS':     'https://cdn.discordapp.com/attachments/1125441054313816145/1502306876149465220/BOREALIS_star.png?ex=69ff3bce&is=69fdea4e&hm=6c62f137bfa7f26653c34e271ecae71b5b8f4b2813bf0405da7f0b553fc9c699&',
+  'LUMINOSITY':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502306895799652492/LUMI_star.png?ex=69ff3bd3&is=69fdea53&hm=bcaa64d07112ddf8c06dde7e1f52a754e066e27a3256e719cdf5f5f90ffc52f1&',
+  'OPPRESSION':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502306918256083186/OPPRESSION_star.png?ex=69ff3bd8&is=69fdea58&hm=408043990ddce1e1338225093f253d487293501156351dd5ea4dd82dfb3e312c&',
+  'GLITCH':       'https://cdn.discordapp.com/attachments/1125441054313816145/1502306934311882792/GLITCH_star.png?ex=69ff3bdc&is=69fdea5c&hm=dd2a3b87cf1ab9cfc78e3f7bfbecde754204ab04d72d2b0868a6f3c359ac759f&',
+  'MONARCH':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502306953689301002/MONARCH_star.png?ex=69ff3be1&is=69fdea61&hm=4bf4fd4478e1b3d49cfc78e3f7bfbecde754204ab04d72d2b0868a6f3c359ac759f&',
+  'NYCTOPHOBIA':  'https://cdn.discordapp.com/attachments/1125441054313816145/1502306969451761704/NYCTO_star.png?ex=69ff3be5&is=69fdea65&hm=a86f289ce9d6a98f580544967f261198017efad80780ea77e81e3a23b33d95f6&',
+  'YOLKEGG':      'https://cdn.discordapp.com/attachments/1125441054313816145/1502307034694156360/YOLKEGG_star.png?ex=69ff3bf4&is=69fdea74&hm=4b61bb98c16869eb1bb0d4457b02fd7289aa36b2342250a27de741567d6acba5&',
+  'PIXELATION':   'https://cdn.discordapp.com/attachments/1125441054313816145/1502307053090373723/Pixelation_star.png?ex=69ff3bf8&is=69fdea78&hm=d09e162d4717da68778c8131600e8d031a47406b658998312c5e8eedf8e690b5&',
+  'MEMORY':       'https://cdn.discordapp.com/attachments/1125441054313816145/1502308712310636645/MEMORY_star.png?ex=69ff3d84&is=69fdec04&hm=7bf7f6017042c5553f85aa2a8e8a67cdaec074058fa714b11eccb83860987620&',
+  'ASTRAIOS':     'https://cdn.discordapp.com/attachments/1125441054313816145/1502309321214660869/ASTRAIOS_star.png?ex=69ff3e15&is=69fdec95&hm=16d20b1d7ed3f7a39305b51c3b22677b852c0d0fd1b2aa85c46788ffb7ce9201&',
+  'NEFERKHAF':    'https://cdn.discordapp.com/attachments/1125441054313816145/1502308266502520872/NEFERKHAF_star.png?ex=69ff3d1a&is=69fdeb9a&hm=05ecb48cf6bb9f4d05b11044badb7da2fd3adbef2246d3856a3c2b1f84857584&',
+  'RED MOON':     'https://cdn.discordapp.com/attachments/1125441054313816145/1502308308424458330/Fragment_of_the_crimson_moon_star.png?ex=69ff3d24&is=69fdeba4&hm=d2daca48464340f4c5ca66e25bb3f57aaf6a85f0674596ba6985583bdfaead0f&',
 };
+const DEFAULT_AURA_ICON = 'https://cdn.discordapp.com/attachments/1125441054313816145/1502307077522194482/Global_star.png?ex=69ff3bfe&is=69fdea7e&hm=d5e29a1fd843483a5325dc437dd16d91172f72d1b08b05d79711f90cb2c6bb4d&';
+
+function getAuraIcon(auraName) {
+  return AURA_ICONS[auraName.toUpperCase()] ?? DEFAULT_AURA_ICON;
+}
 
 function getAuraInfo(auraName) {
   const upper = auraName.toUpperCase().trim();
@@ -259,106 +292,257 @@ function getAuraInfo(auraName) {
   return null;
 }
 
-// ────────────────────────────────────────────────────────────
-//  Descriptions des auras pour /aura
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+//  DESCRIPTIONS DES AURAS (pour /myrare et /guess)
+// ════════════════════════════════════════════════════════════
 const AURA_DESCRIPTIONS = {
-  // CHALLENGED+
-  'MONARCH':                  "L'aura absolue du jeu. Celui qui la porte règne sur tout. Obtenue dans les biomes Corruption ou Glitched.",
-  'LEVIATHAN':                "La bête des profondeurs domptée. Une entité colossale des abysses, liée au biome Rainy.",
-  'ASTRAIOS':                 "L'aura de la singularité cosmique. Celui qui la trouve referme la Singularité elle-même.",
-  'OBLIVION':                 "L'aura de l'oubli total. Obtenue via la potion Oblivion — il découvre La Vérité cachée.",
-  'OPPRESSION':               "Se tenir devant le Dieu oppresseur. Ressentir le poids de toute la création. Biome Hell.",
-  'DREAMATRIC':               "Celui qui l'obtient... ne s'est jamais réveillé. Aura du Dreamspace.",
-  'ILLUSIONARY':              "Une force inconnue transforme son porteur en pantin parfait. Biome Dreamspace.",
-
-  // CHALLENGED
-  'GLITCH':                   "Une erreur dans la réalité. L'aura qui ne devrait pas exister. Biome Glitched.",
-  'NEFERKHAF':                "L'entité rampante des dunes. Créature ancienne obtenue via la Potion of Dune.",
-  'RED MOON':                 "Le Fragment du Chaos lunaire. Obtenu via la Red Moon Potion.",
-  'MEMORY':                   "Memory, The Fallen — une âme oubliée retrouvée via la potion Oblivion.",
-  'BOREALIS':                 "Perdu dans ses rêves sous les aurores. Biome Starfall.",
-
-  // TRANSCENDENT
-  'EQUINOX':                  "L'aura entre le POSITIF et le NÉGATIF. L'une des plus rares du jeu — 1 in 2.5B.",
-  'BREAKTHROUGH':             "??? — Une percée dans l'inconnu. Le joueur a trouvé quelque chose qui ne devrait pas exister.",
-  'LUMINOSITY':               "La Lumière Aveuglante dévore son porteur. Biome Heaven.",
-  'PIXELATION':               "Le joueur devient PIXELISÉ — absorbé par le Cyberspace.",
-  'NYCTOPHOBIA':              "La peur absolue du noir. Le cauchemar littéral vécu. Biome NULL.",
-  'MASTER-HAND':              "L'aura de la Main Maîtresse. Chance inconnue — un mystère total.",
-  'EGGIS':                    "L'Oeuf du Ciel — aura secrète de Pâques. L'une des plus rares Easter Eggs.",
-  'YOLKEGG':                  "Un ami de Pâques retrouvé. Easter Egg ultra rare lié à YOLKEGG.",
-
-  // GLORIOUS
-  'AEGIS':                    "Le bouclier céleste. Protection absolue — 1 in 825M.",
-  'RUINS : WITHERED':         "Les ruines dépérissantes d'une civilisation oubliée.",
-  'APOSTOLOS : VEIL':         "Le voile de l'Apôtre — version cachée d'Apostolos.",
-  'PAROL':                    "Une lanterne dans la nuit — aura de fête rare.",
-  'SOVEREIGN':                "La souveraineté incarnée. 1 in 750M.",
-  'BANSHEE':                  "Le cri de la Banshee résonne dans le NULL. Biome NULL.",
-  'MALEDICTION':              "La malédiction faite aura. 1 in 730M.",
-  'WRAITHLIGHT':              "La lumière du spectre — entre vie et mort.",
-  'PROLOGUE':                 "Le commencement de quelque chose de plus grand. 666M.",
-  'PYTHOS':                   "Le serpent primordial. 1 in 666,666,666.",
-  'HARVESTER':                "Le faucheur des âmes. Biome Hell.",
-  'APOCALYPSE':               "La fin des temps incarnée. Biome Corruption.",
-  'MATRIX : REALITY':         "La réalité de la Matrice révélée. Biome Cyberspace.",
-  'SOPHYRA':                  "Une entité mystérieuse et élégante. 1 in 570M.",
-  'ELUDE':                    "L'insaisissable — toujours hors de portée. 555M.",
-  'MATRIX : OVERDRIVE':       "La Matrice en surchauffe. Biome Cyberspace.",
-  'RUINS':                    "Les ruines d'un monde ancien. 1 in 500M.",
-  'PHANTASMA':                "Le fantôme d'une aura — entre deux mondes.",
-  'KYAWTHUITE : REMEMBRANCE': "Le souvenir du minéral le plus rare du monde réel.",
-  'UNKNOWN':                  "L'inconnu absolu. Identité inconnue. 444M.",
-  'APOSTOLOS':                "L'Apôtre — messager d'une force supérieure.",
-  'AFTER PARTY':              "La fête qui ne se termine jamais. 440M.",
-  'GARGANTUA':                "Une entité colossale au-delà de toute compréhension.",
-  'NORTHERN':                 "Les vents du Nord incarnés. Biome Windy.",
-  'ABYSSAL HUNTER':           "Le chasseur des abysses. Biome Rainy.",
-  "I'M PEACH":                "Une aura secrète et décalée. 1 in 400M.",
-  'CRYOFANG':                 "Les crocs du gel — prédateur des neiges. Biome Snowy.",
-  'SYMPHONY : BLOOMED':       "La symphonie en pleine floraison.",
-  'CHILLSEAR':                "Le froid brûlant — deux opposés fusionnés.",
-  'FLORA : EVERGREEN':        "La nature éternelle et verdoyante.",
-  'ATLAS':                    "Le titan qui porte le monde sur ses épaules.",
-  'ORCHESTRA':                "Une symphonie cosmique de 336M notes.",
-  'LOTUSFALL':                "La chute du lotus — beauté éphémère.",
-  'PERPETUAL':                "L'éternité en mouvement. 315M.",
-  'MAELSTROM':                "Le maelström — tourbillon de puissance brute.",
-  'OVERTURE : HISTORY':       "L'ouverture de l'Histoire — le commencement.",
-  'BLOODLUST':                "La soif de sang. Biome Corruption.",
-  'EXOTIC VOID':              "Le vide exotique — espace inexploré.",
-  'GRAVEBORN':                "Né du tombeau — revenu de la mort.",
-  'PROPHECY':                 "La prophétie réalisée. 275M.",
-  'ASTRAL : ZODIAC':          "Les étoiles du zodiaque alignées.",
-  'ARCHANGEL':                "L'Archange descendu du paradis. Biome Heaven.",
-  'ENCASE':                   "Enfermé dans un cristal d'éternité.",
-  'HYPER-VOLT : EVER-STORM':  "La tempête électrique éternelle.",
-  'SHARD SURFER':             "Surfer sur les éclats de réalité.",
-  'LUMENPOOL':                "La mare de lumière — source de lueur.",
-  'IMPEACHED':                "Destitué — le pouvoir renversé.",
-  'NIGHTMARE SKY':            "Le ciel du cauchemar. Biome Dreamspace.",
-  'TWILIGHT : WITHERING GRACE':"La grâce du crépuscule fané.",
-  'FELLED':                   "Abattu — tombé mais jamais oublié.",
-  'SYMPHONY':                 "La grande symphonie des auras. 175M.",
-  'OVERTURE':                 "L'ouverture — début d'une ère nouvelle.",
-  'CRIMSON':                  "Le cramoisi — rouge sang intense. 120M.",
-  'STARSCOURGE : RADIANT':    "Le fléau des étoiles rayonnant. Biome Starfall.",
-  'SPECTRAFLOW':              "Le flux spectral de toutes les couleurs.",
-  'CHROMATIC : GENESIS':      "La genèse chromatique — naissance de la couleur.",
+  'MONARCH':                    "L'aura absolue du jeu. Celui qui la porte règne sur tout. Obtenue dans les biomes Corruption ou Glitched.",
+  'LEVIATHAN':                  "La bête des profondeurs domptée. Une entité colossale des abysses, liée au biome Rainy.",
+  'ASTRAIOS':                   "L'aura de la singularité cosmique. Celui qui la trouve referme la Singularité elle-même.",
+  'OBLIVION':                   "L'aura de l'oubli total. Obtenue via la potion Oblivion — il découvre La Vérité cachée.",
+  'OPPRESSION':                 "Se tenir devant le Dieu oppresseur. Ressentir le poids de toute la création. Biome Hell.",
+  'DREAMATRIC':                 "Celui qui l'obtient... ne s'est jamais réveillé. Aura du Dreamspace.",
+  'ILLUSIONARY':                "Une force inconnue transforme son porteur en pantin parfait. Biome Dreamspace.",
+  'GLITCH':                     "Une erreur dans la réalité. L'aura qui ne devrait pas exister. Biome Glitched.",
+  'NEFERKHAF':                  "L'entité rampante des dunes. Créature ancienne obtenue via la Potion of Dune.",
+  'RED MOON':                   "Le Fragment du Chaos lunaire. Obtenu via la Red Moon Potion.",
+  'MEMORY':                     "Memory, The Fallen — une âme oubliée retrouvée via la potion Oblivion.",
+  'BOREALIS':                   "Perdu dans ses rêves sous les aurores. Biome Starfall.",
+  'EQUINOX':                    "L'aura entre le POSITIF et le NÉGATIF. L'une des plus rares du jeu — 1 in 2.5B.",
+  'BREAKTHROUGH':               "Une percée dans l'inconnu. Le joueur a trouvé quelque chose qui ne devrait pas exister.",
+  'LUMINOSITY':                 "La Lumière Aveuglante dévore son porteur. Biome Heaven.",
+  'PIXELATION':                 "Le joueur devient PIXELISÉ — absorbé par le Cyberspace.",
+  'NYCTOPHOBIA':                "La peur absolue du noir. Le cauchemar littéral vécu. Biome NULL.",
+  'MASTER-HAND':                "L'aura de la Main Maîtresse. Chance inconnue — un mystère total.",
+  'EGGIS':                      "L'Oeuf du Ciel — aura secrète de Pâques. L'une des plus rares Easter Eggs.",
+  'YOLKEGG':                    "Un ami de Pâques retrouvé. Easter Egg ultra rare lié à YOLKEGG.",
+  'AEGIS':                      "Le bouclier céleste. Protection absolue — 1 in 825M.",
+  'RUINS : WITHERED':           "Les ruines dépérissantes d'une civilisation oubliée.",
+  'APOSTOLOS : VEIL':           "Le voile de l'Apôtre — version cachée d'Apostolos.",
+  'PAROL':                      "Une lanterne dans la nuit — aura de fête rare.",
+  'SOVEREIGN':                  "La souveraineté incarnée. 1 in 750M.",
+  'BANSHEE':                    "Le cri de la Banshee résonne dans le NULL. Biome NULL.",
+  'MALEDICTION':                "La malédiction faite aura. 1 in 730M.",
+  'WRAITHLIGHT':                "La lumière du spectre — entre vie et mort.",
+  'PROLOGUE':                   "Le commencement de quelque chose de plus grand. 666M.",
+  'PYTHOS':                     "Le serpent primordial. 1 in 666,666,666.",
+  'HARVESTER':                  "Le faucheur des âmes. Biome Hell.",
+  'APOCALYPSE':                 "La fin des temps incarnée. Biome Corruption.",
+  'MATRIX : REALITY':           "La réalité de la Matrice révélée. Biome Cyberspace.",
+  'SOPHYRA':                    "Une entité mystérieuse et élégante. 1 in 570M.",
+  'ELUDE':                      "L'insaisissable — toujours hors de portée. 555M.",
+  'MATRIX : OVERDRIVE':         "La Matrice en surchauffe. Biome Cyberspace.",
+  'RUINS':                      "Les ruines d'un monde ancien. 1 in 500M.",
+  'PHANTASMA':                  "Le fantôme d'une aura — entre deux mondes.",
+  'KYAWTHUITE : REMEMBRANCE':   "Le souvenir du minéral le plus rare du monde réel.",
+  'UNKNOWN':                    "L'inconnu absolu. Identité inconnue. 444M.",
+  'APOSTOLOS':                  "L'Apôtre — messager d'une force supérieure.",
+  'AFTER PARTY':                "La fête qui ne se termine jamais. 440M.",
+  'GARGANTUA':                  "Une entité colossale au-delà de toute compréhension.",
+  'NORTHERN':                   "Les vents du Nord incarnés. Biome Windy.",
+  'ABYSSAL HUNTER':             "Le chasseur des abysses. Biome Rainy.",
+  "I'M PEACH":                  "Une aura secrète et décalée. 1 in 400M.",
+  'CRYOFANG':                   "Les crocs du gel — prédateur des neiges. Biome Snowy.",
+  'SYMPHONY : BLOOMED':         "La symphonie en pleine floraison.",
+  'CHILLSEAR':                  "Le froid brûlant — deux opposés fusionnés.",
+  'FLORA : EVERGREEN':          "La nature éternelle et verdoyante.",
+  'ATLAS':                      "Le titan qui porte le monde sur ses épaules.",
+  'ORCHESTRA':                  "Une symphonie cosmique de 336M notes.",
+  'LOTUSFALL':                  "La chute du lotus — beauté éphémère.",
+  'PERPETUAL':                  "L'éternité en mouvement. 315M.",
+  'MAELSTROM':                  "Le maelström — tourbillon de puissance brute.",
+  'OVERTURE : HISTORY':         "L'ouverture de l'Histoire — le commencement.",
+  'BLOODLUST':                  "La soif de sang. Biome Corruption.",
+  'EXOTIC VOID':                "Le vide exotique — espace inexploré.",
+  'GRAVEBORN':                  "Né du tombeau — revenu de la mort.",
+  'PROPHECY':                   "La prophétie réalisée. 275M.",
+  'ASTRAL : ZODIAC':            "Les étoiles du zodiaque alignées.",
+  'ARCHANGEL':                  "L'Archange descendu du paradis. Biome Heaven.",
+  'ENCASE':                     "Enfermé dans un cristal d'éternité.",
+  'HYPER-VOLT : EVER-STORM':    "La tempête électrique éternelle.",
+  'SHARD SURFER':               "Surfer sur les éclats de réalité.",
+  'LUMENPOOL':                  "La mare de lumière — source de lueur.",
+  'IMPEACHED':                  "Destitué — le pouvoir renversé.",
+  'NIGHTMARE SKY':              "Le ciel du cauchemar. Biome Dreamspace.",
+  'TWILIGHT : WITHERING GRACE': "La grâce du crépuscule fané.",
+  'FELLED':                     "Abattu — tombé mais jamais oublié.",
+  'SYMPHONY':                   "La grande symphonie des auras. 175M.",
+  'OVERTURE':                   "L'ouverture — début d'une ère nouvelle.",
+  'CRIMSON':                    "Le cramoisi — rouge sang intense. 120M.",
+  'STARSCOURGE : RADIANT':      "Le fléau des étoiles rayonnant. Biome Starfall.",
+  'SPECTRAFLOW':                "Le flux spectral de toutes les couleurs.",
+  'CHROMATIC : GENESIS':        "La genèse chromatique — naissance de la couleur.",
 };
 
-function getChallengedPing(tier) {
-  return null;
+// ════════════════════════════════════════════════════════════
+//  INVENTORY — Helpers IA
+// ════════════════════════════════════════════════════════════
+
+async function analyzeInventoryWithAI(imageUrl, openrouterKey) {
+  const auraList = Object.keys(FULL_AURA_DB).join(', ');
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${openrouterKey}`,
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-4o',
+      max_tokens: 1500,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Tu es un expert du jeu Roblox Sol's RNG. Analyse cette capture d'écran de l'inventaire d'auras d'un joueur.
+
+Voici la liste COMPLÈTE des auras possibles dans le jeu (uniquement les 100M+ et Challenged) :
+${auraList}
+
+Ta mission :
+1. Identifie TOUTES les auras visibles dans l'image
+2. Pour chaque aura trouvée, donne son nom EXACT tel qu'il apparaît dans la liste ci-dessus (respecte la casse et la ponctuation)
+3. Si une aura est visible mais que tu n'es pas sûr du nom exact, indique-la quand même avec ta meilleure estimation
+
+Réponds UNIQUEMENT en JSON valide, sans texte avant ni après, dans ce format exact :
+{
+  "found": ["NOM_AURA_1", "NOM_AURA_2", ...],
+  "uncertain": ["NOM_AURA_INCERTAIN_1", ...],
+  "confidence": 0.85
 }
 
-function getBillionPlusPing(auraName) {
-  return null;
+Si tu ne vois pas d'inventaire d'auras dans l'image, réponds :
+{"found": [], "uncertain": [], "confidence": 0, "error": "Pas d'inventaire visible"}`
+          },
+          { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } }
+        ]
+      }]
+    })
+  });
+  const data = await response.json();
+  const text = data?.choices?.[0]?.message?.content?.trim() ?? '';
+  try {
+    return JSON.parse(text.replace(/```json|```/g, '').trim());
+  } catch {
+    return { found: [], uncertain: [], confidence: 0, error: 'Erreur de parsing IA' };
+  }
 }
 
-// ────────────────────────────────────────────────────────────
+async function analyzeInventoryTextWithAI(description, openrouterKey) {
+  const auraList = Object.keys(FULL_AURA_DB).join(', ');
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${openrouterKey}`,
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-4o-mini',
+      max_tokens: 800,
+      messages: [{
+        role: 'user',
+        content: `Tu es un expert Sol's RNG. L'utilisateur liste ses auras : "${description}"
+
+Liste officielle des auras (100M+ et Challenged uniquement) : ${auraList}
+
+Identifie les auras mentionnées et retourne UNIQUEMENT ce JSON :
+{"found": ["NOM_EXACT_1", ...], "uncertain": [], "confidence": 0.8}`
+      }]
+    })
+  });
+  const data = await response.json();
+  const text = data?.choices?.[0]?.message?.content?.trim() ?? '';
+  try {
+    return JSON.parse(text.replace(/```json|```/g, '').trim());
+  } catch {
+    return { found: [], uncertain: [], confidence: 0 };
+  }
+}
+
+function buildInventoryEmbed(robloxUsername, aiResult, historyGlobals) {
+  const { found = [], uncertain = [], confidence = 0 } = aiResult;
+
+  const historicNames = (historyGlobals ?? []).map(g => g.auraName.toUpperCase().trim());
+  const allAuraNames  = [...new Set([...found.map(n => n.toUpperCase().trim()), ...historicNames])];
+
+  const enriched = allAuraNames
+    .map(name => {
+      const info = FULL_AURA_DB[name] ?? Object.entries(FULL_AURA_DB).find(([k]) => k.toUpperCase() === name)?.[1];
+      return {
+        name,
+        info: info ?? { tier: 'UNKNOWN', chance: '?', rarity: 0 },
+        fromHistory: historicNames.includes(name),
+        fromAI: found.map(n => n.toUpperCase()).includes(name),
+      };
+    })
+    .filter(e => e.info.tier !== 'UNKNOWN')
+    .sort((a, b) => (TIER_RANK[b.info.tier] ?? 0) - (TIER_RANK[a.info.tier] ?? 0));
+
+  if (enriched.length === 0) {
+    return new EmbedBuilder()
+      .setColor(0xFF4444)
+      .setTitle(`📦 Inventaire de ${robloxUsername}`)
+      .setDescription(
+        "❌ Aucune aura reconnue dans l'inventaire.\n\n" +
+        "Note : Seules les auras **100M+** et **Challenged/Challenged+** sont trackées.\n\n" +
+        "Essaie de joindre une image plus nette, ou liste tes auras avec `/inventory auras: Glitch, Borealis, ...`"
+      )
+      .setTimestamp();
+  }
+
+  const byTier = {};
+  for (const entry of enriched) {
+    const t = entry.info.tier;
+    if (!byTier[t]) byTier[t] = [];
+    byTier[t].push(entry);
+  }
+
+  const tiersSorted = Object.keys(byTier).sort((a, b) => (TIER_RANK[b] ?? 0) - (TIER_RANK[a] ?? 0));
+  const topTier     = tiersSorted[0];
+  const embedColor  = TIER_COLORS[topTier] ?? DEFAULT_GLOBAL_COLOR;
+
+  const embed = new EmbedBuilder()
+    .setColor(embedColor)
+    .setTitle(`📦 Inventaire de ${robloxUsername}`)
+    .setDescription(`**${enriched.length} aura(s) détectée(s)** | Confiance IA : ${Math.round(confidence * 100)}%`)
+    .setTimestamp()
+    .setFooter({ text: "Sol's Stat Tracker Bot • Analyse IA — Auras 100M+ et Challenged uniquement" });
+
+  let fieldCount = 0;
+  for (const tier of tiersSorted) {
+    if (fieldCount >= 24) break;
+    const auras = byTier[tier];
+    const emoji = TIER_EMOJIS[tier] ?? '❓';
+    const lines = auras.map(e => {
+      const src   = e.fromAI && e.fromHistory ? '📸🏆' : e.fromAI ? '📸' : '🏆';
+      const biome = e.info.biome ? ` *(${e.info.biome})*` : '';
+      return `${src} **${e.name}** — ${e.info.chance}${biome}`;
+    });
+
+    const chunks = [];
+    for (let i = 0; i < lines.length; i += 5) chunks.push(lines.slice(i, i + 5));
+    for (let i = 0; i < chunks.length && fieldCount < 24; i++) {
+      embed.addFields({
+        name:   i === 0 ? `${emoji} ${tier} (${auras.length})` : `${emoji} ${tier} (suite)`,
+        value:  chunks[i].join('\n'),
+        inline: false,
+      });
+      fieldCount++;
+    }
+  }
+
+  embed.addFields({
+    name:   '📖 Légende',
+    value:  '📸 = détecté via image | 🏆 = dans tes globals trackés | 📸🏆 = les deux',
+    inline: false,
+  });
+
+  return embed;
+}
+
+// ════════════════════════════════════════════════════════════
 //  WebSocket — Sol's Stat Tracker Gateway
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
 let ws = null;
 let reconnectTimeout = null;
 let reconnectInterval = 31000;
@@ -372,7 +556,7 @@ function connectGateway() {
 
   ws.on('open', () => {
     console.log('[Gateway] ✅ Connecté !');
-    reconnectInterval = 31000;
+    reconnectInterval  = 31000;
     lastDisconnectTime = null;
   });
 
@@ -392,7 +576,6 @@ function connectGateway() {
     reason = reason.toString('utf8');
     console.warn(`[Gateway] Déconnecté (code ${code}${reason ? ` - ${reason}` : ''})`);
     lastDisconnectTime = Date.now();
-
     switch (code) {
       case 4001: console.error('[Gateway] ❌ Token manquant. Arrêt.'); return;
       case 4002: console.error('[Gateway] ❌ Token invalide. Arrêt.'); return;
@@ -424,9 +607,9 @@ function startGatewayWatchdog() {
   }, 5 * 60 * 1000);
 }
 
-// ────────────────────────────────────────────────────────────
-//  Messages spéciaux des auras Transcendantes
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+//  Parsers Global Events
+// ════════════════════════════════════════════════════════════
 const TRANSCENDENT_PATTERNS = [
   {
     regex: /\[?\*{0,2}\[?\*{0,2}@?([A-Za-z0-9_]+)\*{0,2}\]?\*{0,2}\]?\s+Has Found The \[?\*{0,2}\[?[\?]+\]?\*{0,2}\]?\s+between/i,
@@ -513,28 +696,25 @@ function parseLines(content) {
   return results;
 }
 
-// ────────────────────────────────────────────────────────────
-//  Gestion de l'événement global
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+//  Handle Global Event
+// ════════════════════════════════════════════════════════════
 async function handleGlobalEvent(data) {
   if (config.verboseLogging) console.log('[Global] Payload:', JSON.stringify(data));
-  const channelId = data.overrideChannelId ?? config.notificationChannelId;
+  const channelId    = data.overrideChannelId ?? config.notificationChannelId;
   const notifChannel = client.channels.cache.get(channelId);
   if (!notifChannel) { console.warn('[Global] Canal introuvable:', channelId); return; }
 
   const rawContent = data.content || '';
   console.log('[DEBUG] rawContent EXACT:', JSON.stringify(rawContent));
 
-  // ✅ FIX : db chargé EN PREMIER, avant toute utilisation
-  const db = loadDB();
+  const db              = loadDB();
   const linkedUsernames = new Set(Object.values(db).map(u => u.robloxUsername.toLowerCase()));
 
   const transcendent = parseTranscendentMessage(rawContent);
   let finds = transcendent ? [transcendent] : parseLines(rawContent);
 
-  // Filtrer uniquement les joueurs liés (évite de traiter inutilement)
   finds = finds.filter(f => linkedUsernames.has(f.robloxUsername.toLowerCase()));
-
   if (finds.length === 0) {
     if (config.verboseLogging) console.log('[Global] Aucun joueur lié dans ce batch — ignoré.');
     return;
@@ -554,7 +734,6 @@ async function handleGlobalEvent(data) {
     const tierEmoji   = TIER_EMOJIS[tier] ?? '🌌';
     const finalChance = chanceStr ?? auraInfo?.chance ?? 'Inconnue';
     const auraBiome   = auraInfo?.biome ?? null;
-
     const auraIconURL = getAuraIcon(auraName);
 
     const SPECIAL_MESSAGES = {
@@ -564,7 +743,7 @@ async function handleGlobalEvent(data) {
       'BREAKTHROUGH': (display, u) => `**${u}** has found **???**, chance of **1 in 1,999,999,999** **[BREAKTHROUGH!]**`,
       'NYCTOPHOBIA':  (display, u) => `**${display}(@${u})** experienced the **literal nightmare**.`,
       'ILLUSIONARY':  (display, u) => `**${u}** has become **\u2588\u2588\u2588'\u2588 PERFECT PUPPET**.`,
-      'GLITCH':       (display, u) => `error occured from**${display}(@${u})**.`,
+      'GLITCH':       (display, u) => `error occured from **${display}(@${u})**.`,
       'MEMORY':       (display, u) => `**${display}(@${u})** HAS FOUND **Memory, The Fallen!**`,
       'DREAMATRIC':   (display, u) => `**${display}(@${u})** didn't wake up.`,
       'OPPRESSION':   (display, u) => `**${display}(@${u})** Has Stood Before **the God**.`,
@@ -575,8 +754,8 @@ async function handleGlobalEvent(data) {
       'ASTRAIOS':     (display, u) => `**${display}(@${u})** has closed **the Singularity**.`,
       'MONARCH':      (display, u) => `All hail, The **${display}(@${u})**.`,
       'LEVIATHAN':    (display, u) => `**${display}(@${u})** has tamed the **Ruler of Beneath**.`,
-      'NEFERKHAF':    (display, u) => `**${display}(@${u})** HAS FOUND   ** Neferkhaf, The Crawler! ** `,
-      'RED MOON':     (display, u) => `**${display}(@${u})** has gotten the ** Fragment of Chaos. **`,
+      'NEFERKHAF':    (display, u) => `**${display}(@${u})** HAS FOUND **Neferkhaf, The Crawler!**`,
+      'RED MOON':     (display, u) => `**${display}(@${u})** has gotten the **Fragment of Chaos.**`,
     };
 
     const displayName = userData.displayName ?? robloxUsername;
@@ -584,19 +763,15 @@ async function handleGlobalEvent(data) {
     let descriptionLine;
     const specialFn = SPECIAL_MESSAGES[auraName.toUpperCase().trim()];
 
-    if (getMessageFn) {
-      descriptionLine = getMessageFn(displayName, robloxUsername);
-    } else if (specialFn) {
-      descriptionLine = specialFn(displayName, robloxUsername);
-    } else {
+    if (getMessageFn)  descriptionLine = getMessageFn(displayName, robloxUsername);
+    else if (specialFn) descriptionLine = specialFn(displayName, robloxUsername);
+    else {
       descriptionLine = `**${displayName}(@${robloxUsername})** ${action} **${auraName}**`;
       if (finalChance !== 'Inconnue') descriptionLine += `, CHANCE OF **${finalChance}**`;
       if (biome) descriptionLine += ` **[From ${biome}!]**`;
     }
 
-    const fields = [
-      { name: 'Rarity', value: finalChance !== 'Inconnue' ? finalChance : '—', inline: true },
-    ];
+    const fields = [{ name: 'Rarity', value: finalChance !== 'Inconnue' ? finalChance : '—', inline: true }];
     if (auraBiome) fields.push({ name: '🌍 Biome', value: auraBiome, inline: true });
     fields.push({ name: 'Time Discovered', value: `<t:${nowUnix}:R>`, inline: false });
 
@@ -607,24 +782,21 @@ async function handleGlobalEvent(data) {
       .addFields(...fields)
       .setTimestamp();
 
-    const challengedPing  = getChallengedPing(tier);
-    const billionPlusPing = getBillionPlusPing(auraName);
-    const userPing        = userData.notifyDisabled ? '' : `<@${discordId}>`;
-    const extraPings      = [challengedPing, billionPlusPing, userPing].filter(Boolean).join(' ');
+    const userPing  = userData.notifyDisabled ? '' : `<@${discordId}>`;
+    const extraPing = userPing;
 
     await notifChannel.send({
-      content: extraPings ? `<@&${config.notificationRoleId}> ${extraPings}` : `<@&${config.notificationRoleId}>`,
+      content: extraPing ? `<@&${config.notificationRoleId}> ${extraPing}` : `<@&${config.notificationRoleId}>`,
       embeds: [embed],
     });
 
-    // Historique des globals
     const history = loadHistory();
     if (!history[discordId]) history[discordId] = [];
     history[discordId].push({
       auraName,
       tier,
-      chance: finalChance,
-      biome: auraBiome ?? biome ?? null,
+      chance:    finalChance,
+      biome:     auraBiome ?? biome ?? null,
       timestamp: nowUnix,
     });
     saveHistory(history);
@@ -632,15 +804,14 @@ async function handleGlobalEvent(data) {
     totalGlobalsDetected++;
     updateBotStatus();
 
-    if (isTranscendent) console.log(`[Global] 🌌 TRANSCENDANT détecté : "${auraName}" — ${robloxUsername}`);
-    if (challengedPing)  console.log(`[Global] 👑 ${tier} : "${auraName}"`);
+    if (isTranscendent) console.log(`[Global] 🌌 TRANSCENDANT : "${auraName}" — ${robloxUsername}`);
     console.log(`[Global] ✅ Notif envoyée — ${userData.robloxUsername} | "${auraName}"`);
   }
 }
 
-// ────────────────────────────────────────────────────────────
-//  Slash commands
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+//  Slash Commands
+// ════════════════════════════════════════════════════════════
 const commands = [
   new SlashCommandBuilder().setName('link').setDescription('Lier ton username Roblox à ton compte Discord')
     .addStringOption(opt => opt.setName('username').setDescription('Ton username Roblox exact').setRequired(true)),
@@ -655,7 +826,8 @@ const commands = [
   new SlashCommandBuilder().setName('recent').setDescription('Les derniers globals détectés sur le serveur')
     .addIntegerOption(opt => opt.setName('nombre').setDescription('Nombre de globals à afficher (défaut: 10)').setRequired(false).setMinValue(1).setMaxValue(25)),
   new SlashCommandBuilder().setName('notify').setDescription('Activer ou désactiver tes pings de globals')
-    .addStringOption(opt => opt.setName('statut').setDescription('on ou off').setRequired(true).addChoices({ name: '🔔 Activer', value: 'on' }, { name: '🔕 Désactiver', value: 'off' })),
+    .addStringOption(opt => opt.setName('statut').setDescription('on ou off').setRequired(true)
+      .addChoices({ name: '🔔 Activer', value: 'on' }, { name: '🔕 Désactiver', value: 'off' })),
   new SlashCommandBuilder().setName('leaderboard').setDescription('Classement des membres par nombre de globals'),
   new SlashCommandBuilder().setName('gateway').setDescription("(Admin) Statut de la connexion WebSocket").setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   new SlashCommandBuilder().setName('forcesync').setDescription("(Admin) Force la reconnexion au gateway").setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
@@ -669,26 +841,34 @@ const commands = [
     .setDescription("(Admin) Simule un Global pour tester les notifications")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption(opt =>
-      opt.setName('aura')
-        .setDescription("Tape le nom — la liste complète s'affiche automatiquement")
-        .setRequired(true)
-        .setAutocomplete(true)
+      opt.setName('aura').setDescription("Tape le nom — la liste s'affiche automatiquement").setRequired(true).setAutocomplete(true)
     )
     .addStringOption(opt =>
-      opt.setName('channel')
-        .setDescription('Channel de destination')
-        .setRequired(false)
+      opt.setName('channel').setDescription('Channel de destination').setRequired(false)
         .addChoices(
           { name: '📡 Aura Tracker', value: '1448744993283113133' },
           { name: '🔧 Admin',        value: '1448744993283113133' },
         )
     )
     .addStringOption(opt =>
-      opt.setName('pseudo')
-        .setDescription('Username Roblox à utiliser (laisser vide = ton propre pseudo)')
-        .setRequired(false)
+      opt.setName('pseudo').setDescription('Username Roblox à utiliser (vide = toi)').setRequired(false)
     ),
-  new SlashCommandBuilder().setName('guess').setDescription("Mini-jeu : devine l'aura a partir de sa description !"),
+  new SlashCommandBuilder().setName('guess').setDescription("Mini-jeu : devine l'aura à partir de sa description !"),
+
+  // ── /inventory ───────────────────────────────────────────
+  new SlashCommandBuilder()
+    .setName('inventory')
+    .setDescription("Analyse ton inventaire d'auras Sol's RNG avec l'IA (auras 100M+ uniquement)")
+    .addAttachmentOption(opt =>
+      opt.setName('screenshot').setDescription("Screenshot de ton inventaire Sol's RNG").setRequired(false)
+    )
+    .addStringOption(opt =>
+      opt.setName('auras').setDescription('Ou liste tes auras manuellement (ex: Glitch, Borealis, Crimson)').setRequired(false)
+    )
+    .addUserOption(opt =>
+      opt.setName('joueur').setDescription("Voir l'inventaire d'un autre membre (basé sur ses globals trackés)").setRequired(false)
+    ),
+
 ].map(c => c.toJSON());
 
 async function registerCommands() {
@@ -702,12 +882,12 @@ async function registerCommands() {
   } catch (err) { console.error('[Commands] Erreur:', err); }
 }
 
-// ────────────────────────────────────────────────────────────
-//  Handlers interactions
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+//  Interaction Handler
+// ════════════════════════════════════════════════════════════
 client.on('interactionCreate', async interaction => {
 
-  // ── Autocomplete /testglobal ──
+  // ── Autocomplete /testglobal ──────────────────────────────
   if (interaction.isAutocomplete() && interaction.commandName === 'testglobal') {
     const focused = interaction.options.getFocused().toUpperCase();
     const gloriousRandom = { name: '🎲 GLORIOUS RANDOM — Une Glorious au hasard', value: 'GLORIOUS RANDOM' };
@@ -715,7 +895,7 @@ client.on('interactionCreate', async interaction => {
       .filter(([name]) => focused === '' || name.includes(focused))
       .slice(0, 24)
       .map(([name, info]) => ({
-        name: `${name} — ${info.chance} (${info.tier})`,
+        name:  `${name} — ${info.chance} (${info.tier})`,
         value: name,
       }));
     if (focused === '' || 'GLORIOUS RANDOM'.includes(focused)) choices.unshift(gloriousRandom);
@@ -725,7 +905,7 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
   const { commandName } = interaction;
 
-  // /link
+  // ── /link ─────────────────────────────────────────────────
   if (commandName === 'link') {
     const username = interaction.options.getString('username');
     await interaction.deferReply({ ephemeral: true });
@@ -738,13 +918,14 @@ client.on('interactionCreate', async interaction => {
       embeds: [new EmbedBuilder().setTitle('✅ Compte lié !').setColor(0x00FF88)
         .setDescription(`Ton Discord est maintenant lié à **${robloxUser.name}** sur Roblox.`)
         .addFields(
-          { name: '🆔 Roblox ID', value: String(robloxUser.id), inline: true },
+          { name: '🆔 Roblox ID',    value: String(robloxUser.id),       inline: true },
+          { name: '👤 Username',      value: robloxUser.name,             inline: true },
           { name: '🔔 Notifications', value: `Tu seras pingué dans <#${config.notificationChannelId}> à chaque Global !` }
         ).setFooter({ text: "Sol's Stat Tracker Bot" }).setTimestamp()],
     });
   }
 
-  // /unlink
+  // ── /unlink ───────────────────────────────────────────────
   if (commandName === 'unlink') {
     const db = loadDB();
     if (!db[interaction.user.id]) return interaction.reply({ content: "❌ Tu n'as aucun compte Roblox lié.", ephemeral: true });
@@ -753,7 +934,7 @@ client.on('interactionCreate', async interaction => {
     return interaction.reply({ content: `✅ Le lien avec **${old}** a été supprimé.`, ephemeral: true });
   }
 
-  // /links
+  // ── /links ────────────────────────────────────────────────
   if (commandName === 'links') {
     const db = loadDB();
     const entries = Object.entries(db);
@@ -762,40 +943,40 @@ client.on('interactionCreate', async interaction => {
     return interaction.reply({ embeds: [new EmbedBuilder().setTitle('🔗 Comptes liés').setColor(0x5865F2).setDescription(lines).setFooter({ text: `${entries.length} compte(s) lié(s)` })], ephemeral: true });
   }
 
-  // /stats
+  // ── /stats ────────────────────────────────────────────────
   if (commandName === 'stats') {
     const db = loadDB();
     const userData = db[interaction.user.id];
     if (!userData) return interaction.reply({ content: "❌ Tu n'as pas encore lié ton compte. Utilise `/link`", ephemeral: true });
-    const history = loadHistory();
+    const history   = loadHistory();
     const myGlobals = history[interaction.user.id] ?? [];
-    const wsState = ws ? (['🔵 Connecting', '🟢 Connecté', '🟡 Closing', '🔴 Fermé'][ws.readyState] ?? '❓') : '🔴 Non initialisé';
+    const wsState   = ws ? (['🔵 Connecting', '🟢 Connecté', '🟡 Closing', '🔴 Fermé'][ws.readyState] ?? '❓') : '🔴 Non initialisé';
     return interaction.reply({
       embeds: [new EmbedBuilder().setTitle(`📊 ${userData.robloxUsername}`).setColor(0xFFD700)
         .addFields(
-          { name: '🆔 Roblox ID',     value: String(userData.robloxId),  inline: true },
-          { name: '👤 Username',       value: userData.robloxUsername,    inline: true },
+          { name: '🆔 Roblox ID',      value: String(userData.robloxId), inline: true },
+          { name: '👤 Username',        value: userData.robloxUsername,   inline: true },
           { name: '🏆 Globals trackés', value: String(myGlobals.length),  inline: true },
-          { name: '🔌 Gateway',        value: wsState,                    inline: true },
+          { name: '🔌 Gateway',         value: wsState,                   inline: true },
         ).setFooter({ text: "Sol's Stat Tracker Bot" }).setTimestamp()],
       ephemeral: true,
     });
   }
 
-  // /myglobals
+  // ── /myglobals ────────────────────────────────────────────
   if (commandName === 'myglobals') {
     const db = loadDB();
     const userData = db[interaction.user.id];
     if (!userData) return interaction.reply({ content: "❌ Tu n'as pas encore lié ton compte. Utilise `/link`", ephemeral: true });
-    const history = loadHistory();
+    const history   = loadHistory();
     const myGlobals = (history[interaction.user.id] ?? []).slice().reverse();
     if (myGlobals.length === 0) return interaction.reply({ content: "Tu n'as encore aucun global détecté par le bot !", ephemeral: true });
 
-    const PAGE_SIZE = 15;
-    const page = Math.max(1, interaction.options.getInteger('page') ?? 1);
+    const PAGE_SIZE  = 15;
+    const page       = Math.max(1, interaction.options.getInteger('page') ?? 1);
     const totalPages = Math.ceil(myGlobals.length / PAGE_SIZE);
-    const pageIndex = Math.min(page, totalPages);
-    const slice = myGlobals.slice((pageIndex - 1) * PAGE_SIZE, pageIndex * PAGE_SIZE);
+    const pageIndex  = Math.min(page, totalPages);
+    const slice      = myGlobals.slice((pageIndex - 1) * PAGE_SIZE, pageIndex * PAGE_SIZE);
 
     const lines = slice.map(g => {
       const emoji = TIER_EMOJIS[g.tier] ?? '🌟';
@@ -813,10 +994,10 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
-  // /leaderboard
+  // ── /leaderboard ──────────────────────────────────────────
   if (commandName === 'leaderboard') {
     const history = loadHistory();
-    const db = loadDB();
+    const db      = loadDB();
     const entries = Object.entries(history)
       .map(([id, globals]) => ({ id, count: globals.length, username: db[id]?.robloxUsername ?? '?' }))
       .filter(e => e.count > 0)
@@ -826,7 +1007,7 @@ client.on('interactionCreate', async interaction => {
     if (entries.length === 0) return interaction.reply({ content: 'Aucun global enregistré pour le moment.', ephemeral: true });
 
     const medals = ['🥇', '🥈', '🥉'];
-    const lines = entries.map((e, i) => `${medals[i] ?? `**${i + 1}.**`} <@${e.id}> — **${e.username}** — ${e.count} global(s)`);
+    const lines  = entries.map((e, i) => `${medals[i] ?? `**${i + 1}.**`} <@${e.id}> — **${e.username}** — ${e.count} global(s)`);
 
     return interaction.reply({
       embeds: [new EmbedBuilder()
@@ -838,13 +1019,13 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
-  // /globalsof
+  // ── /globalsof ────────────────────────────────────────────
   if (commandName === 'globalsof') {
-    const target = interaction.options.getUser('user');
-    const db = loadDB();
+    const target   = interaction.options.getUser('user');
+    const db       = loadDB();
     const userData = db[target.id];
     if (!userData) return interaction.reply({ content: `❌ **${target.username}** n'a pas lié son compte Roblox.`, ephemeral: true });
-    const history = loadHistory();
+    const history      = loadHistory();
     const theirGlobals = (history[target.id] ?? []).slice().reverse();
     if (theirGlobals.length === 0) return interaction.reply({ content: `**${userData.robloxUsername}** n'a encore aucun global détecté par le bot.`, ephemeral: true });
 
@@ -864,12 +1045,12 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
-  // /myrare
+  // ── /myrare ───────────────────────────────────────────────
   if (commandName === 'myrare') {
     const db = loadDB();
     const userData = db[interaction.user.id];
     if (!userData) return interaction.reply({ content: "❌ Tu n'as pas encore lié ton compte. Utilise `/link`", ephemeral: true });
-    const history = loadHistory();
+    const history   = loadHistory();
     const myGlobals = history[interaction.user.id] ?? [];
     if (myGlobals.length === 0) return interaction.reply({ content: "Tu n'as encore aucun global détecté par le bot !", ephemeral: true });
 
@@ -878,42 +1059,36 @@ client.on('interactionCreate', async interaction => {
       return match ? parseInt(match[1]) : 0;
     }
 
-    const rarest = myGlobals.reduce((best, g) => {
-      return parseChance(g.chance) > parseChance(best.chance) ? g : best;
-    });
-
-    const emoji = TIER_EMOJIS[rarest.tier] ?? '🌟';
-    const color = TIER_COLORS[rarest.tier] ?? DEFAULT_GLOBAL_COLOR;
+    const rarest   = myGlobals.reduce((best, g) => parseChance(g.chance) > parseChance(best.chance) ? g : best);
+    const emoji    = TIER_EMOJIS[rarest.tier] ?? '🌟';
+    const color    = TIER_COLORS[rarest.tier] ?? DEFAULT_GLOBAL_COLOR;
     const auraIcon = getAuraIcon(rarest.auraName);
-    const desc = AURA_DESCRIPTIONS[rarest.auraName.toUpperCase()] ?? null;
+    const desc     = AURA_DESCRIPTIONS[rarest.auraName.toUpperCase()] ?? null;
 
     const embed = new EmbedBuilder()
       .setTitle(`💎 Ton global le plus rare — ${userData.robloxUsername}`)
       .setColor(color)
       .setThumbnail(auraIcon)
       .addFields(
-        { name: `${emoji} Aura`,    value: rarest.auraName,                        inline: true },
-        { name: '🏷️ Tier',         value: rarest.tier,                             inline: true },
-        { name: '🎲 Chance',        value: rarest.chance,                           inline: true },
-        { name: '⏰ Obtenu',        value: `<t:${rarest.timestamp}:R>`,             inline: true },
-        { name: '🌍 Biome',         value: rarest.biome ?? 'Aucun',                 inline: true },
-        { name: '📊 Total globals', value: String(myGlobals.length),                inline: true },
+        { name: `${emoji} Aura`,    value: rarest.auraName,              inline: true },
+        { name: '🏷️ Tier',         value: rarest.tier,                   inline: true },
+        { name: '🎲 Chance',        value: rarest.chance,                 inline: true },
+        { name: '⏰ Obtenu',        value: `<t:${rarest.timestamp}:R>`,   inline: true },
+        { name: '🌍 Biome',         value: rarest.biome ?? 'Aucun',       inline: true },
+        { name: '📊 Total globals', value: String(myGlobals.length),      inline: true },
       );
     if (desc) embed.setDescription(`*${desc}*`);
     embed.setFooter({ text: "Sol's Stat Tracker Bot" }).setTimestamp();
-
     return interaction.reply({ embeds: [embed], ephemeral: true });
   }
 
-  // /compare
+  // ── /compare ──────────────────────────────────────────────
   if (commandName === 'compare') {
     const target = interaction.options.getUser('user');
-    if (target.id === interaction.user.id) {
-      return interaction.reply({ content: "❌ Tu ne peux pas te comparer à toi-même !", ephemeral: true });
-    }
-    const db = loadDB();
-    const myData     = db[interaction.user.id];
-    const theirData  = db[target.id];
+    if (target.id === interaction.user.id) return interaction.reply({ content: "❌ Tu ne peux pas te comparer à toi-même !", ephemeral: true });
+    const db        = loadDB();
+    const myData    = db[interaction.user.id];
+    const theirData = db[target.id];
     if (!myData)    return interaction.reply({ content: "❌ Tu n'as pas encore lié ton compte. Utilise `/link`", ephemeral: true });
     if (!theirData) return interaction.reply({ content: `❌ **${target.username}** n'a pas lié son compte Roblox.`, ephemeral: true });
 
@@ -925,14 +1100,12 @@ client.on('interactionCreate', async interaction => {
       const match = (chanceStr ?? '').replace(/,/g, '').match(/1 IN (\d+)/i);
       return match ? parseInt(match[1]) : 0;
     }
-
     function dominantTier(globals) {
       if (globals.length === 0) return '—';
       const counts = {};
       for (const g of globals) counts[g.tier] = (counts[g.tier] ?? 0) + 1;
       return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
     }
-
     function rarestAura(globals) {
       if (globals.length === 0) return null;
       return globals.reduce((best, g) => parseChance(g.chance) > parseChance(best.chance) ? g : best);
@@ -940,61 +1113,42 @@ client.on('interactionCreate', async interaction => {
 
     const myRarest    = rarestAura(myGlobals);
     const theirRarest = rarestAura(theirGlobals);
-
-    const myRarestChance    = myRarest    ? parseChance(myRarest.chance)    : 0;
-    const theirRarestChance = theirRarest ? parseChance(theirRarest.chance) : 0;
-    const rarestWinner = myRarestChance > theirRarestChance ? '🏆 Toi' : theirRarestChance > myRarestChance ? `🏆 ${theirData.robloxUsername}` : '🤝 Égalité';
+    const myRC        = myRarest    ? parseChance(myRarest.chance)    : 0;
+    const theirRC     = theirRarest ? parseChance(theirRarest.chance) : 0;
+    const rarestWinner = myRC > theirRC ? '🏆 Toi' : theirRC > myRC ? `🏆 ${theirData.robloxUsername}` : '🤝 Égalité';
     const countWinner  = myGlobals.length > theirGlobals.length ? '🏆 Toi' : theirGlobals.length > myGlobals.length ? `🏆 ${theirData.robloxUsername}` : '🤝 Égalité';
+    const myTier       = dominantTier(myGlobals);
+    const theirTier    = dominantTier(theirGlobals);
+    const TO           = { 'CHALLENGED+': 5, 'CHALLENGED': 4, 'TRANSCENDENT': 3, 'GLORIOUS': 2, 'MYTHIC': 1 };
+    const tierWinner   = (TO[myTier] ?? 0) > (TO[theirTier] ?? 0) ? '🏆 Toi' : (TO[theirTier] ?? 0) > (TO[myTier] ?? 0) ? `🏆 ${theirData.robloxUsername}` : '🤝 Égalité';
 
-    const myTier    = dominantTier(myGlobals);
-    const theirTier = dominantTier(theirGlobals);
-
-    const TIER_ORDER = { 'CHALLENGED+': 5, 'CHALLENGED': 4, 'TRANSCENDENT': 3, 'GLORIOUS': 2, 'EXALTED': 1 };
-    const tierWinner = (TIER_ORDER[myTier] ?? 0) > (TIER_ORDER[theirTier] ?? 0) ? '🏆 Toi'
-      : (TIER_ORDER[theirTier] ?? 0) > (TIER_ORDER[myTier] ?? 0) ? `🏆 ${theirData.robloxUsername}`
-      : '🤝 Égalité';
-
-    const embed = new EmbedBuilder()
-      .setTitle(`⚔️ Comparaison — ${myData.robloxUsername} vs ${theirData.robloxUsername}`)
-      .setColor(0x565FF2)
-      .addFields(
-        {
-          name: '📊 Nombre de globals',
-          value: `**${myData.robloxUsername}** : ${myGlobals.length}\n**${theirData.robloxUsername}** : ${theirGlobals.length}\n${countWinner}`,
-          inline: false,
-        },
-        {
-          name: '🏷️ Tier dominant',
-          value: `**${myData.robloxUsername}** : ${myTier !== '—' ? (TIER_EMOJIS[myTier] ?? '') + ' ' + myTier : '—'}\n**${theirData.robloxUsername}** : ${theirTier !== '—' ? (TIER_EMOJIS[theirTier] ?? '') + ' ' + theirTier : '—'}\n${tierWinner}`,
-          inline: false,
-        },
-        {
-          name: '💎 Aura la plus rare',
-          value: `**${myData.robloxUsername}** : ${myRarest ? `${myRarest.auraName} (${myRarest.chance})` : '—'}\n**${theirData.robloxUsername}** : ${theirRarest ? `${theirRarest.auraName} (${theirRarest.chance})` : '—'}\n${rarestWinner}`,
-          inline: false,
-        },
-      )
-      .setFooter({ text: "Sol's Stat Tracker Bot" })
-      .setTimestamp();
-
-    return interaction.reply({ embeds: [embed] });
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle(`⚔️ Comparaison — ${myData.robloxUsername} vs ${theirData.robloxUsername}`)
+        .setColor(0x565FF2)
+        .addFields(
+          { name: '📊 Nombre de globals', value: `**${myData.robloxUsername}** : ${myGlobals.length}\n**${theirData.robloxUsername}** : ${theirGlobals.length}\n${countWinner}`, inline: false },
+          { name: '🏷️ Tier dominant', value: `**${myData.robloxUsername}** : ${myTier !== '—' ? (TIER_EMOJIS[myTier] ?? '') + ' ' + myTier : '—'}\n**${theirData.robloxUsername}** : ${theirTier !== '—' ? (TIER_EMOJIS[theirTier] ?? '') + ' ' + theirTier : '—'}\n${tierWinner}`, inline: false },
+          { name: '💎 Aura la plus rare', value: `**${myData.robloxUsername}** : ${myRarest ? `${myRarest.auraName} (${myRarest.chance})` : '—'}\n**${theirData.robloxUsername}** : ${theirRarest ? `${theirRarest.auraName} (${theirRarest.chance})` : '—'}\n${rarestWinner}`, inline: false },
+        )
+        .setFooter({ text: "Sol's Stat Tracker Bot" })
+        .setTimestamp()],
+    });
   }
 
-  // /topaura
+  // ── /topaura ──────────────────────────────────────────────
   if (commandName === 'topaura') {
     const history = loadHistory();
-    const counts = {};
+    const counts  = {};
     for (const globals of Object.values(history)) {
-      for (const g of globals) {
-        counts[g.auraName] = (counts[g.auraName] ?? 0) + 1;
-      }
+      for (const g of globals) counts[g.auraName] = (counts[g.auraName] ?? 0) + 1;
     }
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
     if (sorted.length === 0) return interaction.reply({ content: 'Aucun global enregistré pour le moment.', ephemeral: true });
 
     const medals = ['🥇', '🥈', '🥉'];
-    const lines = sorted.map(([name, count], i) => {
-      const info = getAuraInfo(name);
+    const lines  = sorted.map(([name, count], i) => {
+      const info  = getAuraInfo(name);
       const emoji = TIER_EMOJIS[info?.tier] ?? '🌟';
       return `${medals[i] ?? `**${i + 1}.**`} ${emoji} **${name}** — ${count} fois`;
     });
@@ -1008,16 +1162,14 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
-  // /recent
+  // ── /recent ───────────────────────────────────────────────
   if (commandName === 'recent') {
-    const history = loadHistory();
-    const db = loadDB();
-    const nombre = interaction.options.getInteger('nombre') ?? 10;
+    const history   = loadHistory();
+    const db        = loadDB();
+    const nombre    = interaction.options.getInteger('nombre') ?? 10;
     const allGlobals = [];
     for (const [discordId, globals] of Object.entries(history)) {
-      for (const g of globals) {
-        allGlobals.push({ ...g, discordId, robloxUsername: db[discordId]?.robloxUsername ?? '?' });
-      }
+      for (const g of globals) allGlobals.push({ ...g, discordId, robloxUsername: db[discordId]?.robloxUsername ?? '?' });
     }
     allGlobals.sort((a, b) => b.timestamp - a.timestamp);
     const recent = allGlobals.slice(0, nombre);
@@ -1037,10 +1189,10 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
-  // /notify
+  // ── /notify ───────────────────────────────────────────────
   if (commandName === 'notify') {
     const statut = interaction.options.getString('statut');
-    const db = loadDB();
+    const db     = loadDB();
     if (!db[interaction.user.id]) return interaction.reply({ content: "❌ Tu n'as pas encore lié ton compte. Utilise `/link`", ephemeral: true });
     db[interaction.user.id].notifyDisabled = (statut === 'off');
     saveDB(db);
@@ -1048,48 +1200,36 @@ client.on('interactionCreate', async interaction => {
     return interaction.reply({ content: msg, ephemeral: true });
   }
 
-  // /guess
+  // ── /guess ────────────────────────────────────────────────
   if (commandName === 'guess') {
     const auraNames = Object.keys(AURA_DB);
-    const answer = auraNames[Math.floor(Math.random() * auraNames.length)];
-    const info = AURA_DB[answer];
+    const answer    = auraNames[Math.floor(Math.random() * auraNames.length)];
+    const info      = AURA_DB[answer];
 
     await interaction.deferReply();
     let hint = AURA_DESCRIPTIONS[answer] ?? `Une aura de tier ${info.tier} avec une chance de ${info.chance}.`;
     try {
       const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.openrouterKey}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.openrouterKey}` },
         body: JSON.stringify({
           model: 'openai/gpt-4o-mini',
           messages: [{
             role: 'user',
-            content: `Tu es un assistant pour un jeu Discord base sur Sol's RNG (Roblox). Genere un indice cryptique EN FRANCAIS pour l'aura "${answer}" (tier: ${info.tier}, chance: ${info.chance}${info.biome ? ', biome: ' + info.biome : ''}). SANS jamais mentionner son nom. Max 2 phrases, style mysterieux.`,
+            content: `Tu es un assistant pour un jeu Discord basé sur Sol's RNG (Roblox). Génère un indice cryptique EN FRANÇAIS pour l'aura "${answer}" (tier: ${info.tier}, chance: ${info.chance}${info.biome ? ', biome: ' + info.biome : ''}). SANS jamais mentionner son nom. Max 2 phrases, style mystérieux.`,
           }],
           max_tokens: 120,
         }),
       });
-      const orData = await orRes.json();
+      const orData  = await orRes.json();
       const generated = orData?.choices?.[0]?.message?.content?.trim();
       if (generated) hint = generated;
-    } catch (err) {
-      console.error('[Guess] OpenRouter erreur:', err.message);
-    }
+    } catch (err) { console.error('[Guess] OpenRouter erreur:', err.message); }
 
     if (!client.guessGames) client.guessGames = {};
-    client.guessGames[interaction.channelId] = {
-      answer: answer.toUpperCase(),
-      hint,
-      tier: info.tier,
-      chance: info.chance,
-      startedBy: interaction.user.id,
-      attempts: 0,
-    };
+    client.guessGames[interaction.channelId] = { answer: answer.toUpperCase(), hint, tier: info.tier, chance: info.chance, startedBy: interaction.user.id, attempts: 0 };
 
-    const tierEmoji = TIER_EMOJIS[info.tier] ?? '🌟';
+    const tierEmoji  = TIER_EMOJIS[info.tier] ?? '🌟';
     const guessEmbed = new EmbedBuilder()
       .setTitle("🎮 Devine l'aura !")
       .setColor(0x7289DA)
@@ -1099,13 +1239,12 @@ client.on('interactionCreate', async interaction => {
         { name: '🎲 Chance', value: info.chance,                  inline: true },
         info.biome ? { name: '🌍 Biome', value: info.biome, inline: true } : { name: '\u200b', value: '\u200b', inline: true },
       )
-      .setFooter({ text: "Reponds dans ce salon avec le nom de l'aura ! Tu as 60 secondes." })
+      .setFooter({ text: "Réponds dans ce salon avec le nom de l'aura ! Tu as 60 secondes." })
       .setTimestamp();
 
     await interaction.editReply({ embeds: [guessEmbed] });
 
     const collector = interaction.channel.createMessageCollector({ filter: m => !m.author.bot, time: 60000 });
-
     collector.on('collect', async msg => {
       const game = client.guessGames?.[interaction.channelId];
       if (!game) return collector.stop('noGame');
@@ -1115,9 +1254,9 @@ client.on('interactionCreate', async interaction => {
         collector.stop('win');
         delete client.guessGames[interaction.channelId];
         const winEmbed = new EmbedBuilder()
-          .setTitle('🎉 Bonne reponse !')
+          .setTitle('🎉 Bonne réponse !')
           .setColor(0x57F287)
-          .setDescription(`<@${msg.author.id}> a trouve **${game.answer}** en ${game.attempts} tentative(s) !`)
+          .setDescription(`<@${msg.author.id}> a trouvé **${game.answer}** en ${game.attempts} tentative(s) !`)
           .addFields({ name: '🎲 Chance', value: game.chance, inline: true })
           .setThumbnail(getAuraIcon(game.answer))
           .setTimestamp();
@@ -1133,28 +1272,27 @@ client.on('interactionCreate', async interaction => {
       const game = client.guessGames?.[interaction.channelId];
       if (game) delete client.guessGames[interaction.channelId];
       const loseEmbed = new EmbedBuilder()
-        .setTitle('⏰ Temps ecoule !')
+        .setTitle('⏰ Temps écoulé !')
         .setColor(0xED4245)
-        .setDescription(`Personne n'a trouve ! La reponse etait **${answer}**.`)
+        .setDescription(`Personne n'a trouvé ! La réponse était **${answer}**.`)
         .setThumbnail(getAuraIcon(answer))
         .setTimestamp();
       await interaction.channel.send({ embeds: [loseEmbed] }).catch(console.error);
     });
-
     return;
   }
 
-  // /forcesync
+  // ── /forcesync ────────────────────────────────────────────
   if (commandName === 'forcesync') {
     connectGateway();
     return interaction.reply({ content: '🔄 Reconnexion au gateway lancée !', ephemeral: true });
   }
 
-  // /clearhistory
+  // ── /clearhistory ─────────────────────────────────────────
   if (commandName === 'clearhistory') {
-    const target = interaction.options.getUser('user');
+    const target  = interaction.options.getUser('user');
     const history = loadHistory();
-    const count = (history[target.id] ?? []).length;
+    const count   = (history[target.id] ?? []).length;
     delete history[target.id];
     saveHistory(history);
     totalGlobalsDetected = Object.values(history).reduce((acc, arr) => acc + arr.length, 0);
@@ -1162,26 +1300,24 @@ client.on('interactionCreate', async interaction => {
     return interaction.reply({ content: `🗑️ Historique de <@${target.id}> effacé (${count} global(s) supprimé(s)).`, ephemeral: true });
   }
 
-  // /gateway
+  // ── /gateway ──────────────────────────────────────────────
   if (commandName === 'gateway') {
     const states = ['🔵 Connecting', '🟢 Open', '🟡 Closing', '🔴 Closed'];
-    const state = ws ? (states[ws.readyState] ?? '❓') : '🔴 Non initialisé';
+    const state  = ws ? (states[ws.readyState] ?? '❓') : '🔴 Non initialisé';
     const uptime = lastDisconnectTime ? `Déconnecté depuis <t:${Math.floor(lastDisconnectTime / 1000)}:R>` : '✅ Connecté';
     return interaction.reply({ content: `**Gateway Sol's Stat Tracker**\nStatut : ${state}\n${uptime}\nURL : \`${config.gatewayURL}\``, ephemeral: true });
   }
 
-  // /testglobal
+  // ── /testglobal ───────────────────────────────────────────
   if (commandName === 'testglobal') {
-    if (interaction.guildId !== config.guildId) {
-      return interaction.reply({ content: '❌ Cette commande est réservée au serveur officiel.', ephemeral: true });
-    }
-    const db = loadDB();
+    if (interaction.guildId !== config.guildId) return interaction.reply({ content: '❌ Cette commande est réservée au serveur officiel.', ephemeral: true });
+    const db       = loadDB();
     const userData = db[interaction.user.id];
     if (!userData) return interaction.reply({ content: "❌ Tu dois d'abord lier ton compte avec `/link`.", ephemeral: true });
 
-    let auraName = interaction.options.getString('aura');
+    let auraName      = interaction.options.getString('aura');
     const pseudoOverride = interaction.options.getString('pseudo');
-    const targetUsername  = pseudoOverride ?? userData.robloxUsername;
+    const targetUsername = pseudoOverride ?? userData.robloxUsername;
 
     if (auraName === 'GLORIOUS RANDOM') {
       const gloriousAuras = Object.keys(AURA_DB).filter(k => AURA_DB[k].tier === 'GLORIOUS');
@@ -1204,7 +1340,6 @@ client.on('interactionCreate', async interaction => {
     });
 
     const targetChannel = interaction.options.getString('channel') ?? '1448744993283113133';
-
     await handleGlobalEvent({
       content: `<:Global:1396815239793606666> **${targetUsername}(@${targetUsername})** HAS FOUND **${auraName}**, CHANCE OF **${chance}**`,
       avatarURL: 'https://cdn.mongoosee.com/assets/solsstattracker/webhook/icon_2.png',
@@ -1212,11 +1347,92 @@ client.on('interactionCreate', async interaction => {
       overrideChannelId: targetChannel,
     });
   }
+
+  // ── /inventory ────────────────────────────────────────────
+  if (commandName === 'inventory') {
+    await interaction.deferReply({ ephemeral: false });
+
+    const screenshot = interaction.options.getAttachment('screenshot');
+    const manualList = interaction.options.getString('auras');
+    const targetUser = interaction.options.getUser('joueur') ?? interaction.user;
+
+    const db       = loadDB();
+    const userData = db[targetUser.id];
+
+    if (!userData) {
+      return interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor(0xFF4444)
+          .setTitle('❌ Compte non lié')
+          .setDescription(`**${targetUser.username}** n'a pas encore lié son compte Roblox.\n\nUtilise \`/link\` pour commencer !`)],
+      });
+    }
+
+    const robloxUsername = userData.robloxUsername;
+    const history        = loadHistory();
+    const historyGlobals = history[targetUser.id] ?? [];
+
+    let aiResult = { found: [], uncertain: [], confidence: 0 };
+
+    // Cas 1 : Image fournie
+    if (screenshot) {
+      const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+      if (!validTypes.includes(screenshot.contentType)) {
+        return interaction.editReply({ content: '❌ Fichier invalide. Envoie une image PNG, JPG ou WEBP.' });
+      }
+      try {
+        aiResult = await analyzeInventoryWithAI(screenshot.url, config.openrouterKey);
+      } catch (err) {
+        console.error('[Inventory] Erreur IA image:', err.message);
+        aiResult = { found: [], uncertain: [], confidence: 0, error: err.message };
+      }
+    }
+    // Cas 2 : Liste texte manuelle
+    else if (manualList) {
+      try {
+        aiResult = await analyzeInventoryTextWithAI(manualList, config.openrouterKey);
+      } catch (err) {
+        console.error('[Inventory] Erreur IA texte:', err.message);
+      }
+    }
+    // Cas 3 : Fallback sur l'historique seul
+    else {
+      if (historyGlobals.length === 0) {
+        return interaction.editReply({
+          embeds: [new EmbedBuilder()
+            .setColor(0xFF8C00)
+            .setTitle(`📦 Inventaire de ${robloxUsername}`)
+            .setDescription(
+              "Aucun screenshot fourni et aucun global tracké.\n\n" +
+              "**Pour analyser ton inventaire :**\n" +
+              "• Joint un screenshot avec `/inventory screenshot: [image]`\n" +
+              "• Ou liste tes auras : `/inventory auras: Glitch, Borealis, Crimson`\n\n" +
+              "ℹ️ Seules les auras **100M+** et **Challenged/Challenged+** sont reconnues."
+            )],
+        });
+      }
+      aiResult = { found: [], uncertain: [], confidence: 1.0 };
+    }
+
+    // Construire et envoyer l'embed
+    const embed = buildInventoryEmbed(robloxUsername, aiResult, historyGlobals);
+
+    if (aiResult.uncertain && aiResult.uncertain.length > 0) {
+      embed.addFields({
+        name:  '⚠️ Auras incertaines (non reconnues avec précision)',
+        value: aiResult.uncertain.join(', '),
+        inline: false,
+      });
+    }
+
+    await interaction.editReply({ embeds: [embed] });
+    console.log(`[Inventory] ✅ Inventaire analysé pour ${robloxUsername} — ${aiResult.found?.length ?? 0} auras IA + ${historyGlobals.length} historique`);
+  }
 });
 
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
 //  Démarrage
-// ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
 client.once('clientReady', async () => {
   console.log(`[Bot] ✅ Connecté en tant que ${client.user.tag}`);
   initTotalGlobals();
@@ -1236,12 +1452,11 @@ client.once('clientReady', async () => {
   setInterval(sendLinkReminder, FOUR_HOURS);
 });
 
-// Serveur HTTP pour Render (évite le crash "no open ports")
+// Serveur HTTP keep-alive pour Render/Railway
 const http = require('http');
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => res.end('Bot en ligne!')).listen(PORT, () => {
   console.log('[HTTP] Serveur keep-alive sur port', PORT);
 });
 
-// ⚠️ Fix : un seul client.login (le double login causait des erreurs)
 client.login(config.token);
