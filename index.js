@@ -1,6 +1,5 @@
 const { Client, GatewayIntentBits, EmbedBuilder, SlashCommandBuilder, PermissionFlagsBits, ActivityType, REST, Routes } = require('discord.js');
 const WebSocket = require('ws');
-const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config.json');
