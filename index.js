@@ -1,3 +1,10 @@
+const { Client, GatewayIntentBits, EmbedBuilder, SlashCommandBuilder, PermissionFlagsBits, ActivityType, REST, Routes } = require('discord.js');
+const WebSocket = require('ws');
+const fetch = require('node-fetch');
+const fs = require('fs');
+const path = require('path');
+const config = require('./config.json');
+
 const ADMIN_LOG_CHANNEL_ID = '1448744993283113133';
 
 const client = new Client({
@@ -170,7 +177,6 @@ const AURA_DB = {
 
 // ════════════════════════════════════════════════════════════
 //  INVENTORY — DB étendue (inclut tout pour analyse screenshot)
-//  Même filtre : 100M+ sauf Challenged/Challenged+
 // ════════════════════════════════════════════════════════════
 const FULL_AURA_DB = { ...AURA_DB };
 
@@ -345,8 +351,6 @@ const AURA_DESCRIPTIONS = {
 // ════════════════════════════════════════════════════════════
 
 async function analyzeInventoryWithAI(imageUrl, openrouterKey) {
-  // Télécharger l'image depuis Discord et la convertir en base64
-  // (les URLs Discord CDN expirent et ne sont pas toujours accessibles par les APIs externes)
   let imageContent;
   try {
     const imgRes  = await fetch(imageUrl);
@@ -356,7 +360,6 @@ async function analyzeInventoryWithAI(imageUrl, openrouterKey) {
     imageContent  = { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}`, detail: 'high' } };
   } catch (err) {
     console.error('[Inventory] Impossible de charger l\'image:', err.message);
-    // Fallback : URL directe
     imageContent = { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } };
   }
 
@@ -444,20 +447,15 @@ Identifie les auras mentionnées et retourne UNIQUEMENT ce JSON :
   }
 }
 
-// Fuzzy match : cherche la meilleure correspondance dans la DB
 function fuzzyFindAura(name) {
   const nameUp = name.toUpperCase().trim();
-  // 1. Match exact
   if (FULL_AURA_DB[nameUp]) return { key: nameUp, info: FULL_AURA_DB[nameUp] };
-  // 2. Match exact key (les clés sont déjà en majuscules)
   const exactCI = Object.entries(FULL_AURA_DB).find(([k]) => k.toUpperCase() === nameUp);
   if (exactCI) return { key: exactCI[0], info: exactCI[1] };
-  // 3. Match partiel
   const partial = Object.entries(FULL_AURA_DB).find(([k]) =>
     k.toUpperCase().includes(nameUp) || nameUp.includes(k.toUpperCase())
   );
   if (partial) return { key: partial[0], info: partial[1] };
-  // 4. Match par mots clés (min 4 chars)
   const nameWords = nameUp.split(/[\s:_\-]+/).filter(w => w.length >= 4);
   if (nameWords.length > 0) {
     const wordMatch = Object.entries(FULL_AURA_DB).find(([k]) =>
@@ -472,7 +470,6 @@ function buildInventoryEmbed(robloxUsername, aiResult, historyGlobals) {
   const { found = [], uncertain = [], confidence = 0 } = aiResult;
 
   const historicNames = (historyGlobals ?? []).map(g => g.auraName.toUpperCase().trim());
-  // Garder les doublons de l'IA (Memory x4, Aegis x4, etc.)
   const aiNamesUpper  = found.map(n => n.toUpperCase().trim());
   const allAuraNames  = [...aiNamesUpper, ...historicNames.filter(h => !aiNamesUpper.includes(h))];
 
@@ -879,6 +876,18 @@ const commands = [
     )
     .addUserOption(opt =>
       opt.setName('joueur').setDescription("Voir l'inventaire d'un autre membre (basé sur ses globals trackés)").setRequired(false)
+    ),
+
+  // ── /say ─────────────────────────────────────────────────
+  new SlashCommandBuilder()
+    .setName('say')
+    .setDescription('Faire dire quelque chose au bot dans le salon dédié')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption(opt =>
+      opt.setName('message').setDescription('Le message à envoyer').setRequired(true)
+    )
+    .addUserOption(opt =>
+      opt.setName('mention').setDescription('Mentionner un utilisateur avant le message').setRequired(false)
     ),
 
 ].map(c => c.toJSON());
@@ -1386,7 +1395,6 @@ client.on('interactionCreate', async interaction => {
 
     let aiResult = { found: [], uncertain: [], confidence: 0 };
 
-    // Cas 1 : Image fournie
     if (screenshot) {
       const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
       if (!validTypes.includes(screenshot.contentType)) {
@@ -1398,17 +1406,13 @@ client.on('interactionCreate', async interaction => {
         console.error('[Inventory] Erreur IA image:', err.message);
         aiResult = { found: [], uncertain: [], confidence: 0, error: err.message };
       }
-    }
-    // Cas 2 : Liste texte manuelle
-    else if (manualList) {
+    } else if (manualList) {
       try {
         aiResult = await analyzeInventoryTextWithAI(manualList, config.openrouterKey);
       } catch (err) {
         console.error('[Inventory] Erreur IA texte:', err.message);
       }
-    }
-    // Cas 3 : Fallback sur l'historique seul
-    else {
+    } else {
       if (historyGlobals.length === 0) {
         return interaction.editReply({
           embeds: [new EmbedBuilder()
@@ -1426,7 +1430,6 @@ client.on('interactionCreate', async interaction => {
       aiResult = { found: [], uncertain: [], confidence: 1.0 };
     }
 
-    // Construire et envoyer l'embed
     const embed = buildInventoryEmbed(robloxUsername, aiResult, historyGlobals);
 
     if (aiResult.uncertain && aiResult.uncertain.length > 0) {
@@ -1439,6 +1442,28 @@ client.on('interactionCreate', async interaction => {
 
     await interaction.editReply({ embeds: [embed] });
     console.log(`[Inventory] ✅ Inventaire analysé pour ${robloxUsername} — ${aiResult.found?.length ?? 0} auras IA + ${historyGlobals.length} historique`);
+  }
+
+  // ── /say ──────────────────────────────────────────────────
+  if (commandName === 'say') {
+    const SAY_CHANNEL_ID = '1457073617476124716';
+    const message        = interaction.options.getString('message');
+    const mention        = interaction.options.getUser('mention');
+
+    const targetChannel = client.channels.cache.get(SAY_CHANNEL_ID);
+    if (!targetChannel) {
+      return interaction.reply({ content: '❌ Salon introuvable (ID : `1457073617476124716`).', ephemeral: true });
+    }
+
+    const content = mention ? `<@${mention.id}> ${message}` : message;
+
+    try {
+      await targetChannel.send({ content, allowedMentions: { users: mention ? [mention.id] : [] } });
+      return interaction.reply({ content: `✅ Message envoyé dans <#${SAY_CHANNEL_ID}>.`, ephemeral: true });
+    } catch (err) {
+      console.error('[Say] Erreur envoi:', err.message);
+      return interaction.reply({ content: `❌ Impossible d'envoyer le message : ${err.message}`, ephemeral: true });
+    }
   }
 });
 
