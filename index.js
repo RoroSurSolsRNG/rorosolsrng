@@ -1,3 +1,24 @@
+// ════════════════════════════════════════════════════════════
+//  IMPORTS
+// ════════════════════════════════════════════════════════════
+const {
+  Client,
+  GatewayIntentBits,
+  ActivityType,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  REST,
+  Routes,
+} = require('discord.js');
+const WebSocket = require('ws');
+const fs        = require('fs');
+const path      = require('path');
+const config    = require('./config.json');
+
+// ════════════════════════════════════════════════════════════
+//  CLIENT
+// ════════════════════════════════════════════════════════════
 const ADMIN_LOG_CHANNEL_ID = '1448744993283113133';
 
 const client = new Client({
@@ -159,7 +180,7 @@ const AURA_DB = {
   'SPECTRAFLOW':                { chance: '1 IN 100,000,000',     tier: 'GLORIOUS',                                    rarity: 100000000  },
   'CHROMATIC : GENESIS':        { chance: '1 IN 99,999,999',      tier: 'GLORIOUS',                                    rarity: 99999999   },
 
-  // ══ MYTHIC (inclus car > Glorious en rareté de gameplay) ══
+  // ══ MYTHIC ══
   'ASTRONAUT':                  { chance: '1 IN 6,117,156',       tier: 'MYTHIC',  biome: 'SINGULARITY',               rarity: 6117156    },
   'COMET: FALLEN':              { chance: '1 IN 15,000,000',      tier: 'MYTHIC',  biome: 'STARFALL',                   rarity: 15000000   },
   'TWILIGHT':                   { chance: '1 IN 20,000,000',      tier: 'MYTHIC',                                       rarity: 20000000   },
@@ -168,10 +189,6 @@ const AURA_DB = {
   'SAILOR: FLYING DUTCHMAN':    { chance: '1 IN 80,000,000',      tier: 'MYTHIC',  biome: 'RAINY',                      rarity: 80000000   },
 };
 
-// ════════════════════════════════════════════════════════════
-//  INVENTORY — DB étendue (inclut tout pour analyse screenshot)
-//  Même filtre : 100M+ sauf Challenged/Challenged+
-// ════════════════════════════════════════════════════════════
 const FULL_AURA_DB = { ...AURA_DB };
 
 // ════════════════════════════════════════════════════════════
@@ -259,7 +276,7 @@ function getAuraInfo(auraName) {
 }
 
 // ════════════════════════════════════════════════════════════
-//  DESCRIPTIONS DES AURAS (pour /myrare et /guess)
+//  DESCRIPTIONS DES AURAS
 // ════════════════════════════════════════════════════════════
 const AURA_DESCRIPTIONS = {
   'MONARCH':                    "L'aura absolue du jeu. Celui qui la porte règne sur tout. Obtenue dans les biomes Corruption ou Glitched.",
@@ -343,20 +360,16 @@ const AURA_DESCRIPTIONS = {
 // ════════════════════════════════════════════════════════════
 //  INVENTORY — Helpers IA
 // ════════════════════════════════════════════════════════════
-
 async function analyzeInventoryWithAI(imageUrl, openrouterKey) {
-  // Télécharger l'image depuis Discord et la convertir en base64
-  // (les URLs Discord CDN expirent et ne sont pas toujours accessibles par les APIs externes)
   let imageContent;
   try {
-    const imgRes  = await fetch(imageUrl);
-    const buffer  = await imgRes.arrayBuffer();
-    const b64     = Buffer.from(buffer).toString('base64');
-    const mime    = imgRes.headers.get('content-type') ?? 'image/png';
-    imageContent  = { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}`, detail: 'high' } };
+    const imgRes = await fetch(imageUrl);
+    const buffer = await imgRes.arrayBuffer();
+    const b64    = Buffer.from(buffer).toString('base64');
+    const mime   = imgRes.headers.get('content-type') ?? 'image/png';
+    imageContent = { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}`, detail: 'high' } };
   } catch (err) {
     console.error('[Inventory] Impossible de charger l\'image:', err.message);
-    // Fallback : URL directe
     imageContent = { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } };
   }
 
@@ -396,12 +409,12 @@ Respond ONLY with valid JSON, no text before or after:
 }
 
 Use UPPERCASE names exactly as they appear in the list. If no inventory is visible:
-{"found": [], "uncertain": [], "confidence": 0, "error": "No inventory visible"}`
+{"found": [], "uncertain": [], "confidence": 0, "error": "No inventory visible"}`,
           },
           imageContent,
-        ]
-      }]
-    })
+        ],
+      }],
+    }),
   });
   const data = await response.json();
   const text = data?.choices?.[0]?.message?.content?.trim() ?? '';
@@ -431,9 +444,9 @@ async function analyzeInventoryTextWithAI(description, openrouterKey) {
 Liste officielle des auras (100M+ et Challenged uniquement) : ${auraList}
 
 Identifie les auras mentionnées et retourne UNIQUEMENT ce JSON :
-{"found": ["NOM_EXACT_1", ...], "uncertain": [], "confidence": 0.8}`
-      }]
-    })
+{"found": ["NOM_EXACT_1", ...], "uncertain": [], "confidence": 0.8}`,
+      }],
+    }),
   });
   const data = await response.json();
   const text = data?.choices?.[0]?.message?.content?.trim() ?? '';
@@ -444,20 +457,15 @@ Identifie les auras mentionnées et retourne UNIQUEMENT ce JSON :
   }
 }
 
-// Fuzzy match : cherche la meilleure correspondance dans la DB
 function fuzzyFindAura(name) {
   const nameUp = name.toUpperCase().trim();
-  // 1. Match exact
   if (FULL_AURA_DB[nameUp]) return { key: nameUp, info: FULL_AURA_DB[nameUp] };
-  // 2. Match exact key (les clés sont déjà en majuscules)
   const exactCI = Object.entries(FULL_AURA_DB).find(([k]) => k.toUpperCase() === nameUp);
   if (exactCI) return { key: exactCI[0], info: exactCI[1] };
-  // 3. Match partiel
   const partial = Object.entries(FULL_AURA_DB).find(([k]) =>
     k.toUpperCase().includes(nameUp) || nameUp.includes(k.toUpperCase())
   );
   if (partial) return { key: partial[0], info: partial[1] };
-  // 4. Match par mots clés (min 4 chars)
   const nameWords = nameUp.split(/[\s:_\-]+/).filter(w => w.length >= 4);
   if (nameWords.length > 0) {
     const wordMatch = Object.entries(FULL_AURA_DB).find(([k]) =>
@@ -472,7 +480,6 @@ function buildInventoryEmbed(robloxUsername, aiResult, historyGlobals) {
   const { found = [], uncertain = [], confidence = 0 } = aiResult;
 
   const historicNames = (historyGlobals ?? []).map(g => g.auraName.toUpperCase().trim());
-  // Garder les doublons de l'IA (Memory x4, Aegis x4, etc.)
   const aiNamesUpper  = found.map(n => n.toUpperCase().trim());
   const allAuraNames  = [...aiNamesUpper, ...historicNames.filter(h => !aiNamesUpper.includes(h))];
 
@@ -775,7 +782,7 @@ async function handleGlobalEvent(data) {
     let descriptionLine;
     const specialFn = SPECIAL_MESSAGES[auraName.toUpperCase().trim()];
 
-    if (getMessageFn)  descriptionLine = getMessageFn(displayName, robloxUsername);
+    if (getMessageFn)   descriptionLine = getMessageFn(displayName, robloxUsername);
     else if (specialFn) descriptionLine = specialFn(displayName, robloxUsername);
     else {
       descriptionLine = `**${displayName}(@${robloxUsername})** ${action} **${auraName}**`;
@@ -794,11 +801,12 @@ async function handleGlobalEvent(data) {
       .addFields(...fields)
       .setTimestamp();
 
-    const userPing  = userData.notifyDisabled ? '' : `<@${discordId}>`;
-    const extraPing = userPing;
+    const userPing = userData.notifyDisabled ? '' : `<@${discordId}>`;
 
     await notifChannel.send({
-      content: extraPing ? `<@&${config.notificationRoleId}> ${extraPing}` : `<@&${config.notificationRoleId}>`,
+      content: userPing
+        ? `<@&${config.notificationRoleId}> ${userPing}`
+        : `<@&${config.notificationRoleId}>`,
       embeds: [embed],
     });
 
@@ -866,8 +874,6 @@ const commands = [
       opt.setName('pseudo').setDescription('Username Roblox à utiliser (vide = toi)').setRequired(false)
     ),
   new SlashCommandBuilder().setName('guess').setDescription("Mini-jeu : devine l'aura à partir de sa description !"),
-
-  // ── /inventory ───────────────────────────────────────────
   new SlashCommandBuilder()
     .setName('inventory')
     .setDescription("Analyse ton inventaire d'auras Sol's RNG avec l'IA (auras 100M+ uniquement)")
@@ -880,7 +886,6 @@ const commands = [
     .addUserOption(opt =>
       opt.setName('joueur').setDescription("Voir l'inventaire d'un autre membre (basé sur ses globals trackés)").setRequired(false)
     ),
-
 ].map(c => c.toJSON());
 
 async function registerCommands() {
@@ -1140,7 +1145,7 @@ client.on('interactionCreate', async interaction => {
         .setColor(0x565FF2)
         .addFields(
           { name: '📊 Nombre de globals', value: `**${myData.robloxUsername}** : ${myGlobals.length}\n**${theirData.robloxUsername}** : ${theirGlobals.length}\n${countWinner}`, inline: false },
-          { name: '🏷️ Tier dominant', value: `**${myData.robloxUsername}** : ${myTier !== '—' ? (TIER_EMOJIS[myTier] ?? '') + ' ' + myTier : '—'}\n**${theirData.robloxUsername}** : ${theirTier !== '—' ? (TIER_EMOJIS[theirTier] ?? '') + ' ' + theirTier : '—'}\n${tierWinner}`, inline: false },
+          { name: '🏷️ Tier dominant',    value: `**${myData.robloxUsername}** : ${myTier !== '—' ? (TIER_EMOJIS[myTier] ?? '') + ' ' + myTier : '—'}\n**${theirData.robloxUsername}** : ${theirTier !== '—' ? (TIER_EMOJIS[theirTier] ?? '') + ' ' + theirTier : '—'}\n${tierWinner}`, inline: false },
           { name: '💎 Aura la plus rare', value: `**${myData.robloxUsername}** : ${myRarest ? `${myRarest.auraName} (${myRarest.chance})` : '—'}\n**${theirData.robloxUsername}** : ${theirRarest ? `${theirRarest.auraName} (${theirRarest.chance})` : '—'}\n${rarestWinner}`, inline: false },
         )
         .setFooter({ text: "Sol's Stat Tracker Bot" })
@@ -1176,9 +1181,9 @@ client.on('interactionCreate', async interaction => {
 
   // ── /recent ───────────────────────────────────────────────
   if (commandName === 'recent') {
-    const history   = loadHistory();
-    const db        = loadDB();
-    const nombre    = interaction.options.getInteger('nombre') ?? 10;
+    const history    = loadHistory();
+    const db         = loadDB();
+    const nombre     = interaction.options.getInteger('nombre') ?? 10;
     const allGlobals = [];
     for (const [discordId, globals] of Object.entries(history)) {
       for (const g of globals) allGlobals.push({ ...g, discordId, robloxUsername: db[discordId]?.robloxUsername ?? '?' });
@@ -1233,7 +1238,7 @@ client.on('interactionCreate', async interaction => {
           max_tokens: 120,
         }),
       });
-      const orData  = await orRes.json();
+      const orData    = await orRes.json();
       const generated = orData?.choices?.[0]?.message?.content?.trim();
       if (generated) hint = generated;
     } catch (err) { console.error('[Guess] OpenRouter erreur:', err.message); }
@@ -1327,7 +1332,7 @@ client.on('interactionCreate', async interaction => {
     const userData = db[interaction.user.id];
     if (!userData) return interaction.reply({ content: "❌ Tu dois d'abord lier ton compte avec `/link`.", ephemeral: true });
 
-    let auraName      = interaction.options.getString('aura');
+    let auraName         = interaction.options.getString('aura');
     const pseudoOverride = interaction.options.getString('pseudo');
     const targetUsername = pseudoOverride ?? userData.robloxUsername;
 
@@ -1386,7 +1391,6 @@ client.on('interactionCreate', async interaction => {
 
     let aiResult = { found: [], uncertain: [], confidence: 0 };
 
-    // Cas 1 : Image fournie
     if (screenshot) {
       const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
       if (!validTypes.includes(screenshot.contentType)) {
@@ -1398,17 +1402,13 @@ client.on('interactionCreate', async interaction => {
         console.error('[Inventory] Erreur IA image:', err.message);
         aiResult = { found: [], uncertain: [], confidence: 0, error: err.message };
       }
-    }
-    // Cas 2 : Liste texte manuelle
-    else if (manualList) {
+    } else if (manualList) {
       try {
         aiResult = await analyzeInventoryTextWithAI(manualList, config.openrouterKey);
       } catch (err) {
         console.error('[Inventory] Erreur IA texte:', err.message);
       }
-    }
-    // Cas 3 : Fallback sur l'historique seul
-    else {
+    } else {
       if (historyGlobals.length === 0) {
         return interaction.editReply({
           embeds: [new EmbedBuilder()
@@ -1426,13 +1426,12 @@ client.on('interactionCreate', async interaction => {
       aiResult = { found: [], uncertain: [], confidence: 1.0 };
     }
 
-    // Construire et envoyer l'embed
     const embed = buildInventoryEmbed(robloxUsername, aiResult, historyGlobals);
 
     if (aiResult.uncertain && aiResult.uncertain.length > 0) {
       embed.addFields({
-        name:  '⚠️ Auras incertaines (non reconnues avec précision)',
-        value: aiResult.uncertain.join(', '),
+        name:   '⚠️ Auras incertaines (non reconnues avec précision)',
+        value:  aiResult.uncertain.join(', '),
         inline: false,
       });
     }
@@ -1464,7 +1463,7 @@ client.once('clientReady', async () => {
   setInterval(sendLinkReminder, FOUR_HOURS);
 });
 
-// Serveur HTTP keep-alive pour Render/Railway
+// ── Keep-alive HTTP (Render / Railway) ───────────────────────
 const http = require('http');
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => res.end('Bot en ligne!')).listen(PORT, () => {
